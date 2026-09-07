@@ -1,4 +1,5 @@
-import { foldTranscriptRows, phoneLivePhase } from "./live";
+import { __pollForTests, __resetLive, foldTranscriptRows, liveState, phoneLivePhase } from "./live";
+import * as api from "@/lib/api";
 import type { LiveTranscriptRow } from "@/lib/types";
 
 // The two rules the call's display rests on, and both are easy to get subtly wrong in a way nothing
@@ -101,5 +102,49 @@ describe("foldTranscriptRows", () => {
   it("returns the previous lines unchanged when a poll brings no rows", () => {
     const previous = foldTranscriptRows({}, [row({ seq: 1, text: "still here" })]);
     expect(foldTranscriptRows(previous, [])).toEqual(previous);
+  });
+});
+
+describe("LiveState.usage", () => {
+  afterEach(() => {
+    __resetLive();
+    vi.restoreAllMocks();
+  });
+
+  it("starts at zeros in IDLE", () => {
+    expect(liveState().usage).toEqual({ audioMs: 0 });
+  });
+
+  it("folds usage from poll() into state", async () => {
+    vi.spyOn(api, "pollLive").mockResolvedValue({
+      ok: true,
+      phase: "listening",
+      seq: 1,
+      transcripts: [],
+      usage: {
+        audioMs: 5000,
+        operator: {
+          inputTokens: 120,
+          outputTokens: 45,
+          cacheReadTokens: 10,
+          totalTokens: 175,
+          costUsd: 0.0025,
+          turns: 2,
+        },
+      },
+    });
+
+    await __pollForTests("session-1");
+    expect(liveState().usage).toEqual({
+      audioMs: 5000,
+      operator: {
+        inputTokens: 120,
+        outputTokens: 45,
+        cacheReadTokens: 10,
+        totalTokens: 175,
+        costUsd: 0.0025,
+        turns: 2,
+      },
+    });
   });
 });

@@ -183,6 +183,9 @@ export function SpaceOverview({
                   key={w.workspaceId}
                   type="button"
                   onClick={() => onOpen(w.workspaceId)}
+                  // Part of the keyboard's roving cursor, on the same terms as an AgentCard row:
+                  // `j`/`k` focus it in document order and `l` clicks it (hooks/use-global-keys.ts).
+                  data-nav-row
                   className={cn(
                     // Square, like the herd rows: this is a divide-y list, and a rounded fill under
                     // a straight hairline reads as a fault. That holds for EVERY state — corners

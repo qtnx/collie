@@ -9,6 +9,7 @@ import type {
   LiveErrorCode,
   LiveStartResponse,
   LiveStopResponse,
+  LiveUsage,
   LiveViewResponse,
 } from "../types.ts";
 import {
@@ -56,6 +57,7 @@ export interface LiveSessionLike {
   readonly lastSeen: number;
   readonly endedAt: number | undefined;
   handleEvent?(event: LiveServerEvent): void;
+  readonly usage?: LiveUsage;
 }
 
 
@@ -93,6 +95,7 @@ export interface LiveStopOutcome {
   body: LiveStopResponse;
   session?: string;
   paneId?: string;
+  usage?: LiveUsage;
 }
 
 export interface LiveService {
@@ -422,6 +425,7 @@ export function createLiveService(deps: LiveDeps): LiveService {
         phase: v.phase,
         seq: v.seq,
         transcripts: v.transcripts,
+        usage: v.usage,
       };
       if (v.error !== undefined) body.error = v.error;
       return {
@@ -443,7 +447,7 @@ export function createLiveService(deps: LiveDeps): LiveService {
           },
         } satisfies LiveStopOutcome;
       }
-
+      const usage = stored.session.usage ?? stored.session.view(0).usage;
       await stored.session.stop(reason).catch(() => {});
       if (activeSession === stored.session) {
         activeSession = null;
@@ -454,9 +458,9 @@ export function createLiveService(deps: LiveDeps): LiveService {
         body: { ok: true },
         session: stored.sessionName,
         paneId: stored.paneId,
+        usage,
       } satisfies LiveStopOutcome;
     },
-
     close(): void {
       clearInterval(timer);
       if (activeSession) {

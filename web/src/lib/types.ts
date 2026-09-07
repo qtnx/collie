@@ -1028,6 +1028,20 @@ export type LiveStartResponse =
   | { ok: true; id: string; sdp: string }
   | { ok: false; code: LiveErrorCode; error: string };
 
+export interface LiveUsage {
+  /** Realtime audio consumed, ms, from the sideband's session.usage.updated. */
+  audioMs: number;
+  /** Operator-agent totals, summed over every assistant message; absent without an operator agent. */
+  operator?: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    totalTokens: number;
+    costUsd?: number;
+    turns: number;
+  };
+}
+
 /** `GET /api/live/:id?after=<seq>` — rows with `seq > after`, ascending. */
 export type LiveViewResponse =
   | {
@@ -1036,6 +1050,7 @@ export type LiveViewResponse =
       error?: string;
       seq: number;
       transcripts: LiveTranscriptRow[];
+      usage: LiveUsage;
     }
   // `live.gone` is the only refusal a VIEW can carry: every other code is decided while a call is
   // being started, and by the time there is an id to poll the session either exists or was reaped.

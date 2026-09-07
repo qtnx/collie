@@ -61,6 +61,7 @@ class FakeLiveSession implements LiveSessionLike {
       phase: this.phase,
       seq: this.seq,
       transcripts: after < this.seq ? [{ seq: 1, role: "assistant", turn: 1, text: "hello", final: true }] : [],
+      usage: { audioMs: 0 },
     };
   }
 
@@ -96,7 +97,7 @@ class ErrorLiveSession implements LiveSessionLike {
     throw new LiveSignalingError("auth", "Token expired");
   }
   view(_after: number): LiveSessionView {
-    return { phase: "error", seq: 0, transcripts: [] };
+    return { phase: "error", seq: 0, transcripts: [], usage: { audioMs: 0 } };
   }
   async stop(): Promise<void> {}
   get lastSeen(): number { return 0; }

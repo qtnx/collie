@@ -13,10 +13,14 @@ import { useBusyWhile } from "@/lib/busy";
 import { useAgentTransitions } from "@/hooks/use-transitions";
 import { usePushSetup } from "@/hooks/use-push";
 import { useConnectionLost } from "@/hooks/use-connection-lost";
+import { useGlobalKeys } from "@/hooks/use-global-keys";
 import { UpdateRibbon } from "@/components/update-ribbon";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { AppHeaderHost } from "@/components/app-header";
 import { PackProvider } from "@/components/pack-provider";
+import { LiveCallDock } from "@/components/live-call-dock";
+import { NavPalette } from "@/components/nav-palette";
+import { ShortcutsHelp } from "@/components/shortcuts-help";
 import { CollieMark } from "@/components/collie-mark";
 import { describeThrownError } from "@/lib/api-error-message";
 import { homePath } from "@/lib/nav";
@@ -80,6 +84,11 @@ export function RootLayout() {
   useBusyWhile(useNavigation().state !== "idle");
   useAgentTransitions(data.agents, paneId ?? null);
   usePushSetup();
+  // THE app's one keyboard handler: one window listener for every shortcut, mounted here for the
+  // same reason the header and the call dock are — it must outlive every route change, and a
+  // per-route listener would answer a key twice wherever two routes overlapped. It owns nothing but
+  // the two sheets it can open; every other action it dispatches goes through the router or the DOM.
+  const keys = useGlobalKeys();
 
   // A viewport-height flex column: the top banners (when shown) are in-flow rows at the top and the
   // active route fills the rest (each route root is `min-h-0 flex-1`). This is what keeps a banner
@@ -129,6 +138,15 @@ export function RootLayout() {
         <AppHeaderHost bridge={data.bridge} error={data.error}>
           <Outlet />
         </AppHeaderHost>
+        {/* THE LIVE CALL, floating over whatever route is on screen. Mounted HERE, once, for the
+            same reason the header is: a call started on one pane must survive navigating to another,
+            and a component mounted inside `<Outlet/>` unmounts on every route change. It portals
+            itself to <body> and renders nothing while there is no call. */}
+        <LiveCallDock />
+        {/* The keyboard's own two surfaces, mounted beside the dock and for the same reason: both
+            are opened from anywhere by a keystroke, so neither can live inside a route. */}
+        <NavPalette open={keys.overlay === "palette"} onClose={keys.closeOverlay} />
+        <ShortcutsHelp open={keys.overlay === "help"} onClose={keys.closeOverlay} />
       </div>
     </PackProvider>
   );

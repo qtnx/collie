@@ -931,9 +931,23 @@ export type LiveStartResponse =
   | { ok: true; id: string; sdp: string }
   | { ok: false; code: LiveErrorCode; error: string };
 
+export interface LiveUsage {
+  /** Realtime audio consumed, ms, from the sideband's session.usage.updated. */
+  audioMs: number;
+  /** Operator-agent totals, summed over every assistant message; absent without an operator agent. */
+  operator?: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    totalTokens: number;
+    costUsd?: number;
+    turns: number;
+  };
+}
+
 /** Response shape for `GET /api/live/:id?after=N`. */
 export type LiveViewResponse =
-  | { ok: true; phase: LivePhase; error?: string; seq: number; transcripts: LiveTranscriptRow[] }
+  | { ok: true; phase: LivePhase; error?: string; seq: number; transcripts: LiveTranscriptRow[]; usage: LiveUsage }
   | { ok: false; code: "live.gone"; error?: string };
 
 /** Response shape for `POST /api/live/:id/stop`. */

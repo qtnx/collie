@@ -41,14 +41,15 @@ import { useHoldReload } from "@/lib/reload-guard";
 import { isSelfEcho, normalizeDraft } from "@/hooks/use-terminal-draft";
 import { adapterFor } from "@/lib/harness";
 import { sendGuardedReply } from "@/lib/reply-action";
+import { registerComposer } from "@/lib/focus-targets";
 import { TerminalDraftPreview } from "@/components/terminal-draft-preview";
 import { scopeKey, type Scope } from "@/lib/scope";
 import { DirectTypingStrip } from "@/components/direct-typing-strip";
 import { RecordingStrip } from "@/components/recording-strip";
 import { useSttRecorder } from "@/hooks/use-stt-recorder";
 import { useHandsFree, useSttCapability } from "@/lib/stt";
-import { useLiveCapability } from "@/lib/live";
-import { LiveCallSheet } from "@/components/live-call-sheet";
+import { useLiveCapability, useLiveState } from "@/lib/live";
+import { beginLiveCall } from "@/components/live-call-dock";
 import { NoEchoNotice } from "@/components/no-echo-notice";
 
 export interface ComposerHandle {
@@ -439,6 +440,13 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   noticeNoEchoRef.current = noticeNoEcho;
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Publish the textarea so the global `i` shortcut can aim at it from the window (lib/focus-targets.ts).
+  // The effect, not the ref callback: `inputRef` is handed to `ChatInput` and to useDirectTyping, and
+  // a second owner of the same slot is how one of them ends up holding null.
+  useEffect(() => {
+    registerComposer(inputRef.current);
+    return () => registerComposer(null);
+  }, []);
   const fileRef = useRef<HTMLInputElement>(null);
   // The camera-roll half of the picker. See the two inputs below.
   const photoRef = useRef<HTMLInputElement>(null);
@@ -487,9 +495,14 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   // ran `collie live on` AND this browser can hold a WebRTC call. Absent is the feature being off,
   // so it draws no button rather than a dead one — and unlike the mic there is no `available: false`
   // button either, because the reason a call cannot be signed (no Codex login) is fixed on the host
-  // and is already the sheet's first line if it is tapped.
+  // and is the dock's first line if the call fails to start.
+  //
+  // The call itself is NOT this component's any more — it belongs to the dock the root layout
+  // mounts, and survives leaving this pane. All the composer reads is whether one is up, so its
+  // button can say so rather than start a second.
   const live = useLiveCapability();
-  const [calling, setCalling] = useState(false);
+  const callStatus = useLiveState().status;
+  const callActive = callStatus !== "idle";
   // ── THE ORBIT TURNS WHILE THE OPERATOR'S WORK IS IN FLIGHT (lib/busy.ts) ───────────────────────
   //
   // Three intervals, declared where the state already lives, so the Collie mark in the header spins
@@ -1635,21 +1648,31 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               It sits OUTSIDE the field's box on purpose: the attach button is inside because it acts
               on the draft, and this does not — it opens a call that has nothing to do with what is
               typed. Which is also why it stays put when the box fills: the mic hands its slot to Send
-              at the first character, and a call is not the alternative to sending a message. */}
+              at the first character, and a call is not the alternative to sending a message.
+
+              IT STARTS THE CALL; IT NO LONGER OPENS ANYTHING. The call used to be a modal sheet this
+              button mounted, so the button was a disclosure (`aria-haspopup`, `aria-expanded`) and
+              tapping it while one was up would have opened a second. The call now lives in the
+              floating dock the root layout mounts (components/live-call-dock.tsx), which is already
+              on screen and reachable from every route — so there is nothing here to disclose, and a
+              tap during a call has nothing left to do. It stays DRAWN and goes disabled, saying why:
+              a control that vanishes mid-call would read as the feature having gone away. */}
           {live?.available === true && (
             <Button
               type="button"
               size="icon"
               variant="outline"
               className="size-11 shrink-0 rounded-full"
-              disabled={locked}
-              aria-haspopup="dialog"
-              aria-expanded={calling}
-              aria-label={translate("composer.live.openAria")}
+              disabled={locked || callActive}
+              aria-label={
+                callActive
+                  ? translate("composer.live.busyAria")
+                  : translate("composer.live.openAria")
+              }
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
                 buzz();
-                setCalling(true);
+                beginLiveCall(paneId);
               }}
             >
               <PhoneCall className="size-4" />
@@ -1758,18 +1781,6 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         onInsert={insertCommand}
         onSubmit={(t) => send(t, false)}
       />
-
-      {/* The call. Keyed by the pane so switching panes tears the old call down and never carries a
-          session into a terminal it was not started for; mounted only while calling, so the sheet's
-          own open/close effect is the call's whole lifetime (see its header). */}
-      {calling && (
-        <LiveCallSheet
-          key={`${scopeId}\0${paneId}`}
-          open
-          paneId={paneId}
-          onClose={() => setCalling(false)}
-        />
-      )}
     </>
   );
 });

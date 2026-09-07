@@ -225,6 +225,7 @@ export const en = {
   "composer.mic.stop": "Stop",
   "composer.mic.discardAria": "Discard recording",
   "composer.live.openAria": "Start a live call",
+  "composer.live.busyAria": "A live call is already running",
   "composer.attach.aria": "Attach file",
   "composer.attach.title": "Attach",
   "composer.attach.photos": "Photos",
@@ -473,6 +474,35 @@ export const en = {
   "commands.empty": "No commands match “{query}”.",
   "commands.confirm": "Confirm?",
 
+  // --- nav (the go-to palette and the keyboard shortcuts sheet) ---
+  "nav.palette.title": "Go to",
+  "nav.palette.placeholder": "Search panes and pages…",
+  "nav.palette.empty": "Nothing matches “{query}”.",
+  "nav.palette.section.panes": "Panes",
+  "nav.palette.section.pages": "Pages",
+  "nav.palette.row.home": "Home",
+  "nav.palette.row.settings": "Settings",
+  "nav.palette.row.pack": "Pack",
+  "nav.help.title": "Keyboard shortcuts",
+  "nav.help.hint": "Shortcuts pause while you type. Press Esc to leave a text field.",
+  "nav.help.action.palette": "Go to a pane or page",
+  "nav.help.action.help": "Show these shortcuts",
+  "nav.help.action.down": "Next row",
+  "nav.help.action.up": "Previous row",
+  "nav.help.action.open": "Open the selected row",
+  "nav.help.action.back": "Go back",
+  "nav.help.action.blur": "Leave the text field",
+  "nav.help.action.home": "Go to the dashboard",
+  "nav.help.action.settings": "Open Settings",
+  "nav.help.action.search": "Search this page",
+  "nav.help.action.compose": "Start typing a reply",
+  "nav.help.action.prevPane": "Previous pane in this space",
+  "nav.help.action.nextPane": "Next pane in this space",
+  "nav.help.action.mute": "Mute or unmute the call",
+  "settings.shortcuts.title": "Keyboard shortcuts",
+  "settings.shortcuts.description": "See every key Collie answers to.",
+  "settings.shortcuts.open": "Show",
+
   // --- quickActions (one-tap reply dock) ---
   "quickActions.group.confirm": "confirm",
   "quickActions.group.common": "common",
@@ -695,8 +725,7 @@ export const en = {
   "stt.error.unsupportedBrowser": "This browser can't record audio.",
   "stt.error.micRefused": "Microphone access was refused.",
 
-  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
-  "live.title": "Live call",
+  // --- live (the voice call, lib/live.ts + components/live-call-dock.tsx) ---
   "live.phase.connecting": "Connecting…",
   "live.phase.listening": "Listening",
   "live.phase.speaking": "Speaking",
@@ -710,6 +739,12 @@ export const en = {
   "live.error.mic": "Microphone access was refused.",
   "live.error.gone": "The call ended on the collie.",
   "live.error.generic": "The call ended unexpectedly — start it again to retry.",
+  "live.dock.duration": "{time} of call",
+  "live.dock.tokens.one": "{count} token",
+  "live.dock.tokens.other": "{count} tokens",
+  "live.dock.cost": "${amount}",
+  "live.dock.showPane": "Show pane",
+  "live.dock.dismiss": "Dismiss",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending": "Send or clear the draft before typing into the terminal.",

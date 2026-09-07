@@ -1,7 +1,8 @@
 import { spawn as spawnChild, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import type { JsonObject, JsonValue } from "../json.ts";
-import { jsonRecord, jsonStringField } from "../stt/json.ts";
+import { jsonNumberField, jsonRecord, jsonStringField } from "../stt/json.ts";
+import type { LiveUsage } from "../types.ts";
 import { chunkLiveContext } from "./protocol.ts";
 import { type LiveAgentEndpoint, type OperatorPanePort } from "./agent-pane.ts";
 import { LIVE_MCP_SERVER_NAME, liveMcpToolNames, type LiveMcpServer } from "./mcp-server.ts";
@@ -134,6 +135,26 @@ export function createOperatorAgentEndpoint(deps: OperatorAgentDeps): LiveAgentE
   let endHandler: ((delegationId: string) => void) | undefined;
   let nextId = 1;
   let pendingText: PendingText | null = null;
+  let usageHandler: ((u: NonNullable<LiveUsage["operator"]>) => void) | undefined;
+  let turns = 0;
+  let cumulativeInputTokens = 0;
+  let cumulativeOutputTokens = 0;
+  let cumulativeCacheReadTokens = 0;
+  let cumulativeTotalTokens = 0;
+  let cumulativeCostUsd = 0;
+  let allMessagesHadCost = true;
+
+  const currentUsageSnapshot = (): NonNullable<LiveUsage["operator"]> => {
+    const snapshot: NonNullable<LiveUsage["operator"]> = {
+      inputTokens: cumulativeInputTokens,
+      outputTokens: cumulativeOutputTokens,
+      cacheReadTokens: cumulativeCacheReadTokens,
+      totalTokens: cumulativeTotalTokens,
+      turns,
+    };
+    if (allMessagesHadCost) snapshot.costUsd = cumulativeCostUsd;
+    return snapshot;
+  };
 
   const emit = (id: string, text: string, kind?: "commentary"): void => {
     for (const chunk of chunkLiveContext(text)) contextHandler?.(id, chunk, kind);
@@ -163,9 +184,28 @@ export function createOperatorAgentEndpoint(deps: OperatorAgentDeps): LiveAgentE
       emit(active.id, `Using ${name}`, "commentary");
       return;
     }
-    if (type === "message_end" && active && jsonStringField(jsonRecord(event.message)?.role) === "assistant" && eventStopReason(event) === "toolUse") {
-      const text = eventText(event);
-      if (text) emit(active.id, text, "commentary");
+    if (type === "message_end") {
+      const message = jsonRecord(event.message);
+      if (jsonStringField(message?.role) === "assistant") {
+        turns += 1;
+        const usageRecord = jsonRecord(message?.usage);
+        cumulativeInputTokens += jsonNumberField(usageRecord?.input) ?? 0;
+        cumulativeOutputTokens += jsonNumberField(usageRecord?.output) ?? 0;
+        cumulativeCacheReadTokens += jsonNumberField(usageRecord?.cacheRead) ?? 0;
+        cumulativeTotalTokens += jsonNumberField(usageRecord?.totalTokens) ?? 0;
+        const costRecord = jsonRecord(usageRecord?.cost);
+        const costTotal = jsonNumberField(costRecord?.total);
+        if (costTotal !== null) {
+          cumulativeCostUsd += costTotal;
+        } else {
+          allMessagesHadCost = false;
+        }
+        usageHandler?.(currentUsageSnapshot());
+        if (active && eventStopReason(event) === "toolUse") {
+          const text = eventText(event);
+          if (text) emit(active.id, text, "commentary");
+        }
+      }
       return;
     }
     if (type === "agent_end" && active && event.isTerminal !== false) {
@@ -314,6 +354,10 @@ export function createOperatorAgentEndpoint(deps: OperatorAgentDeps): LiveAgentE
     },
     onDelegationEnd(handler) {
       endHandler = handler;
+    },
+    onUsage(handler) {
+      usageHandler = handler;
+      if (turns > 0) handler(currentUsageSnapshot());
     },
     async close() {
       closed = true;

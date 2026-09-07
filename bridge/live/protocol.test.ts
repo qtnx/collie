@@ -44,6 +44,14 @@ describe("parseLiveServerEvent", () => {
       type: "delegation.created",
       item: { type: "delegation", target: "client", id: "d", content: [{ type: "input_text", text: "work" }] },
     });
+    expect(parseLiveServerEvent({ type: "session.usage.updated", usage: { audio_duration_ms: 13400 } })).toEqual({
+      type: "session.usage.updated",
+      audioMs: 13400,
+    });
+    expect(parseLiveServerEvent({ type: "session.usage.updated" })).toEqual({
+      type: "session.usage.updated",
+      audioMs: 0,
+    });
     expect(parseLiveServerEvent({ type: "error", error: { message: "bad" } })).toEqual({ type: "error", message: "bad" });
     expect(parseLiveServerEvent({ type: "new.event" })).toEqual({ type: "unknown", wireType: "new.event" });
   });

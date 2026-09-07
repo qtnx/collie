@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Bell, Loader2 } from "lucide-react";
+import { ArrowLeft, Bell, Keyboard, Loader2 } from "lucide-react";
 import { useLoaderData, useNavigate } from "react-router";
 
 import { RouteHeader } from "@/components/app-header";
@@ -15,6 +15,7 @@ import { ThemeControl } from "@/components/theme-control";
 import { HapticsControl } from "@/components/haptics-control";
 import { HandsFreeControl } from "@/components/hands-free-control";
 import { ZenControl } from "@/components/zen-control";
+import { ShortcutsHelp } from "@/components/shortcuts-help";
 import { InstallControl } from "@/components/install-control";
 import { LanguageControl } from "@/components/language-control";
 import { FontSettingsControl } from "@/components/font-settings";
@@ -41,6 +42,7 @@ export function SettingsRoute() {
   useLocale();
   const { state, busy, setEnabled } = usePushControl();
   const [error, setError] = useState<string | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const root = useOptionalRootData();
   // This route's OWN loader: the paired-device registry (lib/loaders.ts devicesLoader).
@@ -153,6 +155,26 @@ export function SettingsRoute() {
             not a rendering pref (those live in the pane's own Display dock). Off by default, because
             zen takes away every way back except one floating button. */}
         <ZenControl />
+
+        {/* The keyboard map, where the other "how this phone treats you" rows are. It is a REFERENCE,
+            not a setting — nothing here can be turned off — so it opens the same sheet `?` does
+            rather than owning a control. That is also the only discovery path a phone has: an iPad
+            with a keyboard attached has no way to learn `?` exists without being told once. */}
+        <Card className="gap-0 py-0">
+          <div className="flex items-center justify-between gap-4 p-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <Keyboard className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="font-medium">{t("settings.shortcuts.title")}</div>
+                <p className="text-sm text-muted-foreground">{t("settings.shortcuts.description")}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="shrink-0" onClick={() => setShortcutsOpen(true)}>
+              {t("settings.shortcuts.open")}
+            </Button>
+          </div>
+        </Card>
+        <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
         <Card className="gap-0 py-0">
           <div className="flex items-center justify-between gap-4 p-4">

@@ -198,6 +198,7 @@ export const zhTW: Dictionary = {
   "composer.mic.stop": "停止",
   "composer.mic.discardAria": "放棄錄音",
   "composer.live.openAria": "開始即時通話",
+  "composer.live.busyAria": "已有即時通話正在進行",
   "composer.attach.aria": "附加檔案",
   "composer.attach.title": "附加",
   "composer.attach.photos": "照片",
@@ -437,6 +438,35 @@ export const zhTW: Dictionary = {
   "commands.empty": "找不到符合「{query}」的指令。",
   "commands.confirm": "確認？",
 
+  // --- nav (the go-to palette and the keyboard shortcuts sheet) ---
+  "nav.palette.title": "前往",
+  "nav.palette.placeholder": "搜尋窗格與頁面…",
+  "nav.palette.empty": "沒有符合「{query}」的結果。",
+  "nav.palette.section.panes": "窗格",
+  "nav.palette.section.pages": "頁面",
+  "nav.palette.row.home": "首頁",
+  "nav.palette.row.settings": "設定",
+  "nav.palette.row.pack": "叢集",
+  "nav.help.title": "鍵盤快速鍵",
+  "nav.help.hint": "輸入時快速鍵會暫停。按 Esc 離開文字欄位。",
+  "nav.help.action.palette": "前往窗格或頁面",
+  "nav.help.action.help": "顯示這些快速鍵",
+  "nav.help.action.down": "下一列",
+  "nav.help.action.up": "上一列",
+  "nav.help.action.open": "開啟選取的列",
+  "nav.help.action.back": "返回",
+  "nav.help.action.blur": "離開文字欄位",
+  "nav.help.action.home": "回到總覽",
+  "nav.help.action.settings": "開啟設定",
+  "nav.help.action.search": "在本頁搜尋",
+  "nav.help.action.compose": "開始輸入回覆",
+  "nav.help.action.prevPane": "本空間的上一個窗格",
+  "nav.help.action.nextPane": "本空間的下一個窗格",
+  "nav.help.action.mute": "靜音或取消靜音通話",
+  "settings.shortcuts.title": "鍵盤快速鍵",
+  "settings.shortcuts.description": "查看 Collie 回應的所有按鍵。",
+  "settings.shortcuts.open": "查看",
+
   // --- quickActions (one-tap reply dock) ---
   "quickActions.group.confirm": "確認",
   "quickActions.group.common": "一般",
@@ -655,8 +685,7 @@ export const zhTW: Dictionary = {
   "stt.error.unsupportedBrowser": "目前瀏覽器不支援音訊錄製。",
   "stt.error.micRefused": "麥克風存取權限被拒絕。",
 
-  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
-  "live.title": "即時通話",
+  // --- live (the voice call, lib/live.ts + components/live-call-dock.tsx) ---
   "live.phase.connecting": "正在連線…",
   "live.phase.listening": "正在聆聽",
   "live.phase.speaking": "正在說話",
@@ -670,6 +699,12 @@ export const zhTW: Dictionary = {
   "live.error.mic": "麥克風存取權限被拒絕。",
   "live.error.gone": "通話已在 collie 上結束。",
   "live.error.generic": "通話意外結束，請重新開始。",
+  "live.dock.duration": "通話 {time}",
+  "live.dock.tokens.one": "{count} 個 token",
+  "live.dock.tokens.other": "{count} 個 token",
+  "live.dock.cost": "{amount} 美元",
+  "live.dock.showPane": "檢視窗格",
+  "live.dock.dismiss": "關閉",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending": "直接輸入終端機前，必須先傳送或清空草稿。",

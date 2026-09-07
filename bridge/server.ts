@@ -1753,12 +1753,30 @@ export function startServer(opts: {
           }
           const outcome = await opts.live.stop(id, reason);
           if (outcome.status === 200 && outcome.paneId) {
+            const detail: AuditDetail = { reason };
+            if (outcome.usage) {
+              const usageDetail: AuditDetail = { audioMs: outcome.usage.audioMs };
+              if (outcome.usage.operator) {
+                const opDetail: AuditDetail = {
+                  inputTokens: outcome.usage.operator.inputTokens,
+                  outputTokens: outcome.usage.operator.outputTokens,
+                  cacheReadTokens: outcome.usage.operator.cacheReadTokens,
+                  totalTokens: outcome.usage.operator.totalTokens,
+                  turns: outcome.usage.operator.turns,
+                };
+                if (outcome.usage.operator.costUsd !== undefined) {
+                  opDetail.costUsd = outcome.usage.operator.costUsd;
+                }
+                usageDetail.operator = opDetail;
+              }
+              detail.usage = usageDetail;
+            }
             audit.record({
               action: "live.stop",
               paneId: outcome.paneId,
               session: outcome.session,
               device: whois(req).device,
-              detail: { reason },
+              detail,
             });
           }
           return json(outcome.body, ae, outcome.status);

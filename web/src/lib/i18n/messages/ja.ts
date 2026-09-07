@@ -209,6 +209,7 @@ export const ja: Dictionary = {
   "composer.mic.stop": "停止",
   "composer.mic.discardAria": "録音を破棄",
   "composer.live.openAria": "ライブ通話を開始",
+  "composer.live.busyAria": "ライブ通話がすでに進行中です",
   "composer.attach.aria": "ファイルを添付",
   "composer.attach.title": "添付",
   "composer.attach.photos": "写真",
@@ -454,6 +455,35 @@ export const ja: Dictionary = {
   "commands.empty": "「{query}」に一致するコマンドはありません",
   "commands.confirm": "実行しますか？",
 
+  // --- nav (the go-to palette and the keyboard shortcuts sheet) ---
+  "nav.palette.title": "移動",
+  "nav.palette.placeholder": "ペインとページを検索…",
+  "nav.palette.empty": "「{query}」に一致する項目はありません",
+  "nav.palette.section.panes": "ペイン",
+  "nav.palette.section.pages": "ページ",
+  "nav.palette.row.home": "ホーム",
+  "nav.palette.row.settings": "設定",
+  "nav.palette.row.pack": "パック",
+  "nav.help.title": "キーボードショートカット",
+  "nav.help.hint": "入力中はショートカットが止まります。Esc でテキスト欄から抜けられます。",
+  "nav.help.action.palette": "ペインやページへ移動する",
+  "nav.help.action.help": "このショートカット一覧を表示",
+  "nav.help.action.down": "次の行",
+  "nav.help.action.up": "前の行",
+  "nav.help.action.open": "選択中の行を開く",
+  "nav.help.action.back": "戻る",
+  "nav.help.action.blur": "テキスト欄から抜ける",
+  "nav.help.action.home": "ダッシュボードへ移動",
+  "nav.help.action.settings": "設定を開く",
+  "nav.help.action.search": "このページ内を検索",
+  "nav.help.action.compose": "返信の入力を始める",
+  "nav.help.action.prevPane": "このスペースの前のペイン",
+  "nav.help.action.nextPane": "このスペースの次のペイン",
+  "nav.help.action.mute": "通話のミュートを切り替える",
+  "settings.shortcuts.title": "キーボードショートカット",
+  "settings.shortcuts.description": "Collie が応答するキーの一覧です。",
+  "settings.shortcuts.open": "表示",
+
   // --- quickActions (one-tap reply dock) ---
   "quickActions.group.confirm": "確認",
   "quickActions.group.common": "一般",
@@ -674,8 +704,7 @@ export const ja: Dictionary = {
   "stt.error.unsupportedBrowser": "使用中のブラウザは音声録音に対応していません。",
   "stt.error.micRefused": "マイクへのアクセスが拒否されました。",
 
-  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
-  "live.title": "ライブ通話",
+  // --- live (the voice call, lib/live.ts + components/live-call-dock.tsx) ---
   "live.phase.connecting": "接続中…",
   "live.phase.listening": "聞いています",
   "live.phase.speaking": "話しています",
@@ -689,6 +718,12 @@ export const ja: Dictionary = {
   "live.error.mic": "マイクへのアクセスが拒否されました。",
   "live.error.gone": "collie 側で通話が終了しました。",
   "live.error.generic": "通話が予期せず終了しました。もう一度開始してください。",
+  "live.dock.duration": "通話時間 {time}",
+  "live.dock.tokens.one": "{count} トークン",
+  "live.dock.tokens.other": "{count} トークン",
+  "live.dock.cost": "{amount} 米ドル",
+  "live.dock.showPane": "ペインを表示",
+  "live.dock.dismiss": "閉じる",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending":

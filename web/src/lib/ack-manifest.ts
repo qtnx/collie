@@ -170,11 +170,11 @@ export const ACK_MANIFEST = {
   },
   startLive: {
     channel: "inline",
-    why: "The answer is the call itself: the sheet's phase line moves from connecting to listening, and a refusal (no Codex sign-in, a call already running, the endpoint saying no) is a standing sentence the operator reads in the same sheet before deciding what to do next (components/live-call-sheet.tsx).",
+    why: "The answer is the call itself: the dock's phase line moves from connecting to listening, and a refusal (no Codex sign-in, a call already running, the endpoint saying no) is a standing sentence the operator reads in the dock's own card before deciding what to do next (components/live-call-dock.tsx).",
   },
   stopLive: {
     channel: "silent",
-    why: "End is answered by the sheet closing and the microphone releasing under the thumb; it is also fired from pagehide with nobody left to read a status line.",
+    why: "End is answered by the dock clearing and the microphone releasing under the thumb; it is also fired from pagehide with nobody left to read a status line.",
   },
 // `satisfies`, not an annotation: the KEYS stay known to the compiler (so a typo'd name is a type
 // error at any reader, rather than a silent `undefined`), while every entry is still checked against

@@ -1,7 +1,7 @@
 import type { LiveAgentEndpoint } from "./agent-pane.ts";
 import { buildDelegationContextAppend, buildSessionClose, type LiveClientMessage, type LiveServerEvent } from "./protocol.ts";
 import type { LiveControlTransport } from "./signaling.ts";
-
+import type { LiveUsage } from "../types.ts";
 export type LivePhase = "connecting" | "listening" | "working" | "ended" | "error";
 
 export interface LiveTranscriptRow {
@@ -19,6 +19,7 @@ export interface LiveSessionView {
   /** Highest seq issued so far; the phone passes it back as `?after=`. */
   seq: number;
   transcripts: LiveTranscriptRow[];
+  usage: LiveUsage;
 }
 
 export interface LiveSessionOptions {
@@ -52,7 +53,8 @@ export class LiveSession {
   private userTranscriptTurn = 0;
   private assistantTranscriptTurn = 0;
   private lastTranscript: Omit<LiveTranscriptRow, "seq"> | undefined;
-
+  private audioMs = 0;
+  private operatorUsage: NonNullable<LiveUsage["operator"]> | undefined;
   constructor(opts: LiveSessionOptions) {
     this.id = opts.id;
     this.transport = opts.transport;
@@ -72,6 +74,9 @@ export class LiveSession {
         this.activeDelegationId = undefined;
         this.phase = "listening";
       }
+    });
+    this.agent.onUsage?.((u) => {
+      this.operatorUsage = u;
     });
     try {
       const answer = await this.transport.connect(offerSdp);
@@ -100,6 +105,9 @@ export class LiveSession {
       case "input_transcript.added":
         this.addTranscript("user", event.item.text);
         break;
+      case "session.usage.updated":
+        this.audioMs = event.audioMs;
+        break;
       case "output_transcript.added":
         this.addTranscript("assistant", event.item.text);
         break;
@@ -124,9 +132,16 @@ export class LiveSession {
       phase: this.phase,
       seq: this.sequence,
       transcripts: this.transcripts.filter((row) => row.seq > after),
+      usage: this.usage,
     };
     if (this.errorText !== undefined) view.error = this.errorText;
     return view;
+  }
+
+  get usage(): LiveUsage {
+    const usage: LiveUsage = { audioMs: this.audioMs };
+    if (this.operatorUsage) usage.operator = this.operatorUsage;
+    return usage;
   }
 
   stop(_reason?: string): Promise<void> {

@@ -131,6 +131,10 @@ export function AgentCard({
     <button
       type="button"
       onClick={onClick}
+      // The keyboard's roving cursor moves between elements carrying this attribute, in document
+      // order (hooks/use-global-keys.ts). It goes on the BUTTON, which is what `j`/`k` focus and
+      // what `l` clicks — so the keyboard path and the tap path are the same path.
+      data-nav-row
       className={cn(
         "w-full text-left transition-transform active:scale-[0.99]",
         // No radius on a flat row, in ANY state. These sit in a `divide-y` list, and a rounded fill

@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { LiveAgentEndpoint } from "./agent-pane.ts";
 import type { LiveClientMessage } from "./protocol.ts";
 import type { LiveControlTransport } from "./signaling.ts";
+import type { LiveUsage } from "../types.ts";
 import { LiveSession } from "./session.ts";
 
 class FakeTransport implements LiveControlTransport {
@@ -26,6 +27,7 @@ class FakeAgent implements LiveAgentEndpoint {
   readonly started: Array<{ id: string; request: string }> = [];
   private contextHandler: ((id: string, text: string, kind?: "commentary") => void) | undefined;
   private endHandler: ((id: string) => void) | undefined;
+  private usageHandler: ((u: NonNullable<LiveUsage["operator"]>) => void) | undefined;
   closed = false;
 
   startDelegation(id: string, request: string): void {
@@ -38,6 +40,13 @@ class FakeAgent implements LiveAgentEndpoint {
 
   onDelegationEnd(handler: (id: string) => void): void {
     this.endHandler = handler;
+  }
+  onUsage(handler: (u: NonNullable<LiveUsage["operator"]>) => void): void {
+    this.usageHandler = handler;
+  }
+
+  emitUsage(u: NonNullable<LiveUsage["operator"]>): void {
+    this.usageHandler?.(u);
   }
 
   emitContext(id: string, text: string, kind?: "commentary"): void {
@@ -124,5 +133,39 @@ describe("LiveSession", () => {
     await session.stop();
     session.handleEvent({ type: "session.started", session: { id: "late" } });
     expect(session.view(0).phase).toBe("ended");
+  });
+
+  test("tracks audio and operator usage", async () => {
+    const transport = new FakeTransport();
+    const agent = new FakeAgent();
+    const session = new LiveSession({ id: "live-usage", transport, agent });
+
+    expect(session.view(0).usage).toEqual({ audioMs: 0 });
+    expect(session.usage).toEqual({ audioMs: 0 });
+
+    await session.start("offer");
+    session.handleEvent({ type: "session.usage.updated", audioMs: 8400 });
+    expect(session.view(0).usage).toEqual({ audioMs: 8400 });
+
+    agent.emitUsage({
+      inputTokens: 100,
+      outputTokens: 50,
+      cacheReadTokens: 10,
+      totalTokens: 160,
+      costUsd: 0.0012,
+      turns: 1,
+    });
+    expect(session.view(0).usage).toEqual({
+      audioMs: 8400,
+      operator: {
+        inputTokens: 100,
+        outputTokens: 50,
+        cacheReadTokens: 10,
+        totalTokens: 160,
+        costUsd: 0.0012,
+        turns: 1,
+      },
+    });
+    expect(session.usage).toEqual(session.view(0).usage);
   });
 });

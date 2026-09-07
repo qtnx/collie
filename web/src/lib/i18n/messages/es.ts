@@ -211,6 +211,7 @@ export const es: Dictionary = {
   "composer.mic.stop": "Detener",
   "composer.mic.discardAria": "Descartar grabación",
   "composer.live.openAria": "Iniciar llamada en vivo",
+  "composer.live.busyAria": "Ya hay una llamada en vivo en curso",
   "composer.attach.aria": "Adjuntar archivo",
   "composer.attach.title": "Adjuntar",
   "composer.attach.photos": "Fotos",
@@ -458,6 +459,35 @@ export const es: Dictionary = {
   "commands.empty": "Ningún comando coincide con “{query}”.",
   "commands.confirm": "Confirmar",
 
+  // --- nav (the go-to palette and the keyboard shortcuts sheet) ---
+  "nav.palette.title": "Ir a",
+  "nav.palette.placeholder": "Buscar paneles y páginas…",
+  "nav.palette.empty": "Nada coincide con “{query}”.",
+  "nav.palette.section.panes": "Paneles",
+  "nav.palette.section.pages": "Páginas",
+  "nav.palette.row.home": "Inicio",
+  "nav.palette.row.settings": "Ajustes",
+  "nav.palette.row.pack": "Manada",
+  "nav.help.title": "Atajos de teclado",
+  "nav.help.hint": "Los atajos se pausan mientras escribes. Pulsa Esc para salir del campo de texto.",
+  "nav.help.action.palette": "Ir a un panel o una página",
+  "nav.help.action.help": "Mostrar estos atajos",
+  "nav.help.action.down": "Fila siguiente",
+  "nav.help.action.up": "Fila anterior",
+  "nav.help.action.open": "Abrir la fila seleccionada",
+  "nav.help.action.back": "Volver",
+  "nav.help.action.blur": "Salir del campo de texto",
+  "nav.help.action.home": "Ir al panel principal",
+  "nav.help.action.settings": "Abrir Ajustes",
+  "nav.help.action.search": "Buscar en esta página",
+  "nav.help.action.compose": "Empezar a escribir una respuesta",
+  "nav.help.action.prevPane": "Panel anterior de este espacio",
+  "nav.help.action.nextPane": "Panel siguiente de este espacio",
+  "nav.help.action.mute": "Silenciar o reactivar la llamada",
+  "settings.shortcuts.title": "Atajos de teclado",
+  "settings.shortcuts.description": "Todas las teclas a las que responde Collie.",
+  "settings.shortcuts.open": "Mostrar",
+
   // --- quickActions (one-tap reply dock) ---
   "quickActions.group.confirm": "confirmar",
   "quickActions.group.common": "comunes",
@@ -682,8 +712,7 @@ export const es: Dictionary = {
   "stt.error.unsupportedBrowser": "Este navegador no soporta grabación de audio.",
   "stt.error.micRefused": "Permiso de micrófono denegado.",
 
-  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
-  "live.title": "Llamada en vivo",
+  // --- live (the voice call, lib/live.ts + components/live-call-dock.tsx) ---
   "live.phase.connecting": "Conectando…",
   "live.phase.listening": "Escuchando",
   "live.phase.speaking": "Hablando",
@@ -697,6 +726,12 @@ export const es: Dictionary = {
   "live.error.mic": "Permiso de micrófono denegado.",
   "live.error.gone": "La llamada terminó en el collie.",
   "live.error.generic": "La llamada terminó de forma inesperada. Vuelve a iniciarla.",
+  "live.dock.duration": "{time} de llamada",
+  "live.dock.tokens.one": "{count} token",
+  "live.dock.tokens.other": "{count} tokens",
+  "live.dock.cost": "{amount} US$",
+  "live.dock.showPane": "Ver panel",
+  "live.dock.dismiss": "Descartar",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending":

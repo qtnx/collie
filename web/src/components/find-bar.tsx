@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { registerFind } from "@/lib/focus-targets";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 
@@ -35,9 +36,14 @@ export function FindBar({
   useLocale();
   const resolvedSubject = subject ?? t("find.subject.output");
   const inputRef = useRef<HTMLInputElement>(null);
-  // Focus (and pop the keyboard) as soon as the bar opens so the user can type immediately.
+  // Focus (and pop the keyboard) as soon as the bar opens so the user can type immediately, and
+  // publish the field so the global `/` shortcut can aim at it from the window while it is open
+  // (lib/focus-targets.ts). Both are the same fact — this input is where searching happens — so they
+  // live in one effect, and the bar unmounting takes the registration with it.
   useEffect(() => {
     inputRef.current?.focus();
+    registerFind(inputRef.current);
+    return () => registerFind(null);
   }, []);
 
   const countLabel = query ? (count > 0 ? `${current + 1}/${count}` : "0/0") : "";

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonObject } from "../json.ts";
-
 import type { OperatorPanePort } from "./agent-pane.ts";
 import { createOperatorAgentEndpoint, type OperatorChild, type OperatorClock } from "./operator-agent.ts";
 import type { LiveMcpServer } from "./mcp-server.ts";
+import type { LiveUsage } from "../types.ts";
 
 class FakeClock implements OperatorClock {
   readonly delays: number[] = [];
@@ -143,5 +143,126 @@ describe("createOperatorAgentEndpoint", () => {
     clock.fire(3_000);
     await closingPromise;
     expect(closingFake.killed).toBe(true);
+  });
+
+  test("sums usage and cost from two assistant message_end events", async () => {
+    const fake = fakeChild();
+    const clock = new FakeClock();
+    const endpoint = createOperatorAgentEndpoint({
+      settings: { kind: "ompx", bin: "/bin/ompx", model: "model" },
+      port: pane(),
+      workDir: "/private/live",
+      pumpCommand: ["/bin/collie", "live-mcp"],
+      mcp: { socketPath: "/socket", close: () => {} } satisfies LiveMcpServer,
+      language: "English",
+      clock,
+      files: { write: () => {} },
+      spawn: () => fake.child,
+    });
+    const usageSnapshots: Array<NonNullable<LiveUsage["operator"]>> = [];
+    endpoint.onUsage?.((u) => usageSnapshots.push(u));
+
+    endpoint.startDelegation("d1", "work");
+    fake.send({ type: "ready" });
+    await settle();
+
+    fake.send({
+      type: "message_end",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "First." }],
+        usage: {
+          input: 100,
+          output: 20,
+          cacheRead: 10,
+          totalTokens: 130,
+          cost: { total: 0.001 },
+        },
+      },
+      stopReason: "toolUse",
+    });
+    await settle();
+
+    expect(usageSnapshots).toHaveLength(1);
+    expect(usageSnapshots[0]).toEqual({
+      inputTokens: 100,
+      outputTokens: 20,
+      cacheReadTokens: 10,
+      totalTokens: 130,
+      turns: 1,
+      costUsd: 0.001,
+    });
+
+    fake.send({
+      type: "message_end",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "Second." }],
+        usage: {
+          input: 200,
+          output: 40,
+          cacheRead: 30,
+          totalTokens: 270,
+          cost: { total: 0.002 },
+        },
+      },
+    });
+    await settle();
+
+    expect(usageSnapshots).toHaveLength(2);
+    expect(usageSnapshots[1]).toEqual({
+      inputTokens: 300,
+      outputTokens: 60,
+      cacheReadTokens: 40,
+      totalTokens: 400,
+      turns: 2,
+      costUsd: 0.003,
+    });
+  });
+
+  test("omits costUsd when an assistant message lacks cost.total", async () => {
+    const fake = fakeChild();
+    const clock = new FakeClock();
+    const endpoint = createOperatorAgentEndpoint({
+      settings: { kind: "ompx", bin: "/bin/ompx", model: "model" },
+      port: pane(),
+      workDir: "/private/live",
+      pumpCommand: ["/bin/collie", "live-mcp"],
+      mcp: { socketPath: "/socket", close: () => {} } satisfies LiveMcpServer,
+      language: "English",
+      clock,
+      files: { write: () => {} },
+      spawn: () => fake.child,
+    });
+    const usageSnapshots: Array<NonNullable<LiveUsage["operator"]>> = [];
+    endpoint.onUsage?.((u) => usageSnapshots.push(u));
+
+    endpoint.startDelegation("d1", "work");
+    fake.send({ type: "ready" });
+    await settle();
+
+    fake.send({
+      type: "message_end",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "No cost." }],
+        usage: {
+          input: 50,
+          output: 10,
+          cacheRead: 0,
+          totalTokens: 60,
+        },
+      },
+    });
+    await settle();
+
+    expect(usageSnapshots[0]).toEqual({
+      inputTokens: 50,
+      outputTokens: 10,
+      cacheReadTokens: 0,
+      totalTokens: 60,
+      turns: 1,
+    });
+    expect(usageSnapshots[0]?.costUsd).toBeUndefined();
   });
 });

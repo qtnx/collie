@@ -8,16 +8,23 @@ import type {
   LiveCapability,
   LivePhase,
   LiveTranscriptRow,
+  LiveUsage,
   LiveViewResponse,
 } from "@/lib/types";
 
 // THE PHONE'S HALF OF A LIVE CALL — one call at a time, held in module state.
 //
 // A call is not component state. It owns a microphone, a peer connection and a poll, all of which
-// must survive the sheet re-rendering and none of which may be started twice; and ending it is the
+// must survive the dock re-rendering and none of which may be started twice; and ending it is the
 // one thing that has to happen even when the page is going away. So this is the same module-store
 // idiom the rest of `lib/` uses (lib/haptics.ts, lib/stt.ts's hands-free): module state, a listeners
-// Set, and a `useSyncExternalStore` snapshot — the store is the call, and the sheet is a view of it.
+// Set, and a `useSyncExternalStore` snapshot — the store is the call, and the dock is a view of it.
+//
+// THE STORE OUTLIVES EVERY ROUTE, and that is now load-bearing rather than incidental. The call used
+// to be a modal sheet inside the composer, keyed by scope+pane, so a pane switch unmounted it and
+// tore the call down; `components/live-call-dock.tsx` is mounted once in the root layout instead, and
+// this module is what lets that work — a call started on one pane keeps delegating into `paneId`
+// while the operator reads anything else.
 //
 // TWO GATES DECIDE WHETHER A LIVE BUTTON EXISTS, exactly as they do for the microphone (lib/stt.ts):
 //
@@ -46,7 +53,7 @@ const SPEAKING_LEVEL = 0.015;
 export type PhoneLivePhase = LivePhase | "muted" | "speaking";
 
 export interface LiveState {
-  /** `idle` before a call and after one is dismissed; the sheet is open for everything else. */
+  /** `idle` before a call and after one is dismissed; the dock is on screen for everything else. */
   status: "idle" | "connecting" | "active" | "ended" | "error";
   /** The pane this call is delegating into. `null` while idle. */
   paneId: string | null;
@@ -65,6 +72,8 @@ export interface LiveState {
   assistant?: LiveTranscriptRow;
   /** A user-presentable sentence. Set with `status: "error"`, and never a bare code. */
   error?: string;
+  /** Realtime audio and operator agent tokens/cost consumed so far. */
+  usage: LiveUsage;
 }
 
 const IDLE: LiveState = {
@@ -74,13 +83,14 @@ const IDLE: LiveState = {
   mediaUp: false,
   muted: false,
   outputLevel: 0,
+  usage: { audioMs: 0 },
 };
 
 let state: LiveState = IDLE;
 const listeners = new Set<() => void>();
 
 /** The live call itself. Deliberately NOT in `state`: none of it is renderable, and a snapshot that
- *  changed identity when a timer id did would re-render the sheet ten times a second. */
+ *  changed identity when a timer id did would re-render the dock ten times a second. */
 let peer: LivePeer | null = null;
 let sessionId: string | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -102,7 +112,7 @@ export function liveState(): LiveState {
   return state;
 }
 
-/** Reactive read of the call. The sheet and the composer button both go through this. */
+/** Reactive read of the call. The dock and the composer button both go through this. */
 export function useLiveState(): LiveState {
   return useSyncExternalStore(subscribe, liveState, liveState);
 }
@@ -143,7 +153,7 @@ export function useLiveCapability(): LiveCapability | null {
 }
 
 /**
- * The one word the sheet shows, merged from the bridge's phase and the browser's own audio.
+ * The one word the dock shows, merged from the bridge's phase and the browser's own audio.
  *
  * ORDER IS THE WHOLE RULE, and it is precedence, not preference:
  *   1. `ended` / `error` — the call is over; nothing the microphone is doing changes that.
@@ -177,7 +187,7 @@ export interface LiveTranscriptLines {
  * A later row with the same `(role, turn)` REPLACES the earlier one — that is how a partial
  * transcript grows into its final sentence — and rows arrive ascending, so the last row for each
  * role in a batch is the current one. Only the CURRENT turn is kept: this is a call, not a
- * transcript view, and the sheet shows what is being said now.
+ * transcript view, and the dock shows what is being said now.
  */
 export function foldTranscriptRows(
   previous: LiveTranscriptLines,
@@ -237,10 +247,10 @@ async function poll(): Promise<void> {
   if (view.phase === "ended") {
     // The BRIDGE ended it, so there is nothing to tell it — just release the microphone here.
     sessionId = null;
-    teardown({ ...folded, bridgePhase: "ended", status: "ended" });
+    teardown({ ...folded, bridgePhase: "ended", status: "ended", usage: view.usage });
     return;
   }
-  setState({ ...folded, bridgePhase: view.phase, status: "active" });
+  setState({ ...folded, bridgePhase: view.phase, status: "active", usage: view.usage });
 }
 
 /**
@@ -261,6 +271,7 @@ export async function startCall(paneId: string, audioElement: HTMLAudioElement):
     mediaUp: false,
     muted: false,
     outputLevel: 0,
+    usage: { audioMs: 0 },
     user: undefined,
     assistant: undefined,
     error: undefined,
@@ -337,7 +348,7 @@ export async function endCall(reason?: string): Promise<void> {
   if (id !== null) await stopLive(id);
 }
 
-/** Put the store back to idle — the sheet closing after a call has ended. */
+/** Put the store back to idle — the dock being cleared after a call has ended. */
 export function dismissCall(): void {
   if (state.status === "connecting" || state.status === "active") return;
   state = IDLE;
@@ -354,4 +365,10 @@ export function __resetLive(): void {
   lastSeq = 0;
   state = IDLE;
   listeners.clear();
+}
+
+/** Test seam — run one poll pass against an active session. */
+export async function __pollForTests(id = "test-session"): Promise<void> {
+  sessionId = id;
+  await poll();
 }

@@ -1,5 +1,5 @@
 import type { TranscriptEntry } from "../journal/types.ts";
-import type { AgentStatus } from "../types.ts";
+import type { AgentStatus, LiveUsage } from "../types.ts";
 import { chunkLiveContext } from "./protocol.ts";
 
 /** Everything the agent plane needs from ONE pane, injected so the watcher is pure under `bun test`. */
@@ -29,6 +29,7 @@ export interface LiveAgentEndpoint {
   startDelegation(id: string, request: string): void;
   onContext(handler: (delegationId: string, text: string, kind?: "commentary") => void): void;
   onDelegationEnd(handler: (delegationId: string) => void): void;
+  onUsage?(handler: (u: NonNullable<LiveUsage["operator"]>) => void): void;
   close(): Promise<void>;
 }
 

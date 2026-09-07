@@ -208,6 +208,7 @@ export const ko: Dictionary = {
   "composer.mic.stop": "중지",
   "composer.mic.discardAria": "녹음 취소",
   "composer.live.openAria": "라이브 통화 시작",
+  "composer.live.busyAria": "라이브 통화가 이미 진행 중입니다",
   "composer.attach.aria": "파일 첨부",
   "composer.attach.title": "첨부",
   "composer.attach.photos": "사진",
@@ -452,6 +453,35 @@ export const ko: Dictionary = {
   "commands.empty": "“{query}”와 일치하는 명령어가 없습니다.",
   "commands.confirm": "실행할까요?",
 
+  // --- nav (the go-to palette and the keyboard shortcuts sheet) ---
+  "nav.palette.title": "이동",
+  "nav.palette.placeholder": "페인과 페이지 검색…",
+  "nav.palette.empty": "“{query}”와 일치하는 항목이 없습니다.",
+  "nav.palette.section.panes": "페인",
+  "nav.palette.section.pages": "페이지",
+  "nav.palette.row.home": "홈",
+  "nav.palette.row.settings": "설정",
+  "nav.palette.row.pack": "팩",
+  "nav.help.title": "키보드 단축키",
+  "nav.help.hint": "입력하는 동안에는 단축키가 멈춥니다. Esc를 누르면 입력란에서 빠져나옵니다.",
+  "nav.help.action.palette": "페인이나 페이지로 이동",
+  "nav.help.action.help": "이 단축키 목록 보기",
+  "nav.help.action.down": "다음 행",
+  "nav.help.action.up": "이전 행",
+  "nav.help.action.open": "선택한 행 열기",
+  "nav.help.action.back": "뒤로",
+  "nav.help.action.blur": "입력란에서 나가기",
+  "nav.help.action.home": "대시보드로 이동",
+  "nav.help.action.settings": "설정 열기",
+  "nav.help.action.search": "이 페이지에서 검색",
+  "nav.help.action.compose": "답장 입력 시작",
+  "nav.help.action.prevPane": "이 스페이스의 이전 페인",
+  "nav.help.action.nextPane": "이 스페이스의 다음 페인",
+  "nav.help.action.mute": "통화 음소거 전환",
+  "settings.shortcuts.title": "키보드 단축키",
+  "settings.shortcuts.description": "Collie가 반응하는 모든 키를 확인하세요.",
+  "settings.shortcuts.open": "보기",
+
   // --- quickActions (one-tap reply dock) ---
   "quickActions.group.confirm": "확인",
   "quickActions.group.common": "일반",
@@ -672,8 +702,7 @@ export const ko: Dictionary = {
   "stt.error.unsupportedBrowser": "오디오 녹음을 지원하지 않는 브라우저입니다.",
   "stt.error.micRefused": "마이크 접근 권한이 거부되었습니다.",
 
-  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
-  "live.title": "라이브 통화",
+  // --- live (the voice call, lib/live.ts + components/live-call-dock.tsx) ---
   "live.phase.connecting": "연결 중…",
   "live.phase.listening": "듣는 중",
   "live.phase.speaking": "말하는 중",
@@ -687,6 +716,12 @@ export const ko: Dictionary = {
   "live.error.mic": "마이크 접근 권한이 거부되었습니다.",
   "live.error.gone": "collie에서 통화가 종료되었습니다.",
   "live.error.generic": "통화가 예기치 않게 종료되었습니다. 다시 시작하세요.",
+  "live.dock.duration": "통화 시간 {time}",
+  "live.dock.tokens.one": "{count} 토큰",
+  "live.dock.tokens.other": "{count} 토큰",
+  "live.dock.cost": "미화 {amount}달러",
+  "live.dock.showPane": "패널 보기",
+  "live.dock.dismiss": "닫기",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending": "터미널에 입력하려면 먼저 작성 중인 초안을 전송하거나 삭제하세요.",

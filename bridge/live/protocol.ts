@@ -1,5 +1,5 @@
 import type { JsonValue } from "../json.ts";
-import { jsonRecord, jsonStringField } from "../stt/json.ts";
+import { jsonNumberField, jsonRecord, jsonStringField } from "../stt/json.ts";
 
 /** Frameless Bidi model used by Codex Desktop live calls. */
 export const LIVE_MODEL = "gpt-live-1-codex" as const;
@@ -51,6 +51,7 @@ export type LiveServerEvent =
       type: "delegation.created";
       item: { type: "delegation"; target: "client"; id: string; content: LiveInputTextContent[] };
     }
+  | { type: "session.usage.updated"; audioMs: number }
   | { type: "error"; message: string }
   | { type: "unknown"; wireType: string };
 
@@ -119,6 +120,12 @@ function parseErrorEvent(payload: JsonValue): LiveServerEvent | null {
   return message === null ? null : { type: "error", message };
 }
 
+function parseUsageUpdatedEvent(payload: JsonValue): LiveServerEvent {
+  const usage = jsonRecord(jsonRecord(payload)?.usage);
+  const audioMs = jsonNumberField(usage?.audio_duration_ms) ?? 0;
+  return { type: "session.usage.updated", audioMs };
+}
+
 /** Parse a JSON string or decoded value from the Frameless Bidi data channel. */
 export function parseLiveServerEvent(payload: JsonValue): LiveServerEvent | null {
   const parsed = parsePayload(payload);
@@ -142,6 +149,8 @@ export function parseLiveServerEvent(payload: JsonValue): LiveServerEvent | null
       return parseDelegationCreatedEvent(parsed);
     case "error":
       return parseErrorEvent(parsed);
+    case "session.usage.updated":
+      return parseUsageUpdatedEvent(parsed);
     default:
       return { type: "unknown", wireType: type };
   }

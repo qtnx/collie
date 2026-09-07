@@ -213,6 +213,7 @@ export const de: Dictionary = {
   "composer.mic.stop": "Stopp",
   "composer.mic.discardAria": "Aufnahme verwerfen",
   "composer.live.openAria": "Live-Anruf starten",
+  "composer.live.busyAria": "Ein Live-Anruf läuft bereits",
   "composer.attach.aria": "Datei anhängen",
   "composer.attach.title": "Anhängen",
   "composer.attach.photos": "Fotos",
@@ -459,6 +460,35 @@ export const de: Dictionary = {
   "commands.empty": "Keine Befehle für „{query}“ gefunden.",
   "commands.confirm": "Bestätigen",
 
+  // --- nav (the go-to palette and the keyboard shortcuts sheet) ---
+  "nav.palette.title": "Gehe zu",
+  "nav.palette.placeholder": "Bereiche und Seiten durchsuchen …",
+  "nav.palette.empty": "Nichts passt zu „{query}“.",
+  "nav.palette.section.panes": "Bereiche",
+  "nav.palette.section.pages": "Seiten",
+  "nav.palette.row.home": "Startseite",
+  "nav.palette.row.settings": "Einstellungen",
+  "nav.palette.row.pack": "Rudel",
+  "nav.help.title": "Tastenkürzel",
+  "nav.help.hint": "Beim Tippen pausieren die Kürzel. Mit Esc verlässt du das Textfeld.",
+  "nav.help.action.palette": "Zu einem Bereich oder einer Seite springen",
+  "nav.help.action.help": "Diese Tastenkürzel anzeigen",
+  "nav.help.action.down": "Nächste Zeile",
+  "nav.help.action.up": "Vorherige Zeile",
+  "nav.help.action.open": "Ausgewählte Zeile öffnen",
+  "nav.help.action.back": "Zurück",
+  "nav.help.action.blur": "Textfeld verlassen",
+  "nav.help.action.home": "Zur Übersicht",
+  "nav.help.action.settings": "Einstellungen öffnen",
+  "nav.help.action.search": "Auf dieser Seite suchen",
+  "nav.help.action.compose": "Antwort schreiben",
+  "nav.help.action.prevPane": "Vorheriger Bereich in diesem Space",
+  "nav.help.action.nextPane": "Nächster Bereich in diesem Space",
+  "nav.help.action.mute": "Anruf stummschalten oder fortsetzen",
+  "settings.shortcuts.title": "Tastenkürzel",
+  "settings.shortcuts.description": "Alle Tasten, auf die Collie reagiert.",
+  "settings.shortcuts.open": "Anzeigen",
+
   // --- quickActions (one-tap reply dock) ---
   "quickActions.group.confirm": "Bestätigen",
   "quickActions.group.common": "Häufig",
@@ -684,8 +714,7 @@ export const de: Dictionary = {
   "stt.error.unsupportedBrowser": "Dieser Browser unterstützt keine Audioaufnahme.",
   "stt.error.micRefused": "Der Zugriff auf das Mikrofon wurde verweigert.",
 
-  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
-  "live.title": "Live-Anruf",
+  // --- live (the voice call, lib/live.ts + components/live-call-dock.tsx) ---
   "live.phase.connecting": "Verbinden…",
   "live.phase.listening": "Hört zu",
   "live.phase.speaking": "Spricht",
@@ -699,6 +728,12 @@ export const de: Dictionary = {
   "live.error.mic": "Der Zugriff auf das Mikrofon wurde verweigert.",
   "live.error.gone": "Der Anruf wurde auf dem Collie beendet.",
   "live.error.generic": "Der Anruf wurde unerwartet beendet. Starte ihn erneut.",
+  "live.dock.duration": "{time} Gesprächsdauer",
+  "live.dock.tokens.one": "{count} Token",
+  "live.dock.tokens.other": "{count} Token",
+  "live.dock.cost": "{amount} $",
+  "live.dock.showPane": "Pane anzeigen",
+  "live.dock.dismiss": "Schließen",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending":
