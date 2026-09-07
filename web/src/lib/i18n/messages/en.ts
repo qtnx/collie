@@ -224,6 +224,7 @@ export const en = {
   "composer.mic.manualHint": "lands in the message box",
   "composer.mic.stop": "Stop",
   "composer.mic.discardAria": "Discard recording",
+  "composer.live.openAria": "Start a live call",
   "composer.attach.aria": "Attach file",
   "composer.attach.title": "Attach",
   "composer.attach.photos": "Photos",
@@ -693,6 +694,22 @@ export const en = {
   "stt.error.nothingRecorded": "Nothing was recorded.",
   "stt.error.unsupportedBrowser": "This browser can't record audio.",
   "stt.error.micRefused": "Microphone access was refused.",
+
+  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
+  "live.title": "Live call",
+  "live.phase.connecting": "Connecting…",
+  "live.phase.listening": "Listening",
+  "live.phase.speaking": "Speaking",
+  "live.phase.working": "Working on it",
+  "live.phase.muted": "Muted",
+  "live.phase.ended": "Call ended",
+  "live.phase.error": "Call ended",
+  "live.mute": "Mute",
+  "live.unmute": "Unmute",
+  "live.end": "End call",
+  "live.error.mic": "Microphone access was refused.",
+  "live.error.gone": "The call ended on the collie.",
+  "live.error.generic": "The call ended unexpectedly — start it again to retry.",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending": "Send or clear the draft before typing into the terminal.",

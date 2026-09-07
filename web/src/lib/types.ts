@@ -921,6 +921,15 @@ export interface BridgeConfig {
    */
   stt?: SttCapability;
   /**
+   * The live call, when the operator ran `collie live on`. Mirrors `LiveCapability` in
+   * bridge/types.ts.
+   *
+   * **Absent is the feature being off**, exactly as `stt` above — so the phone draws no Live button
+   * rather than a disabled one, and a bridge older than the field looks the same as one whose
+   * operator declined.
+   */
+  live?: LiveCapability;
+  /**
    * What this collie accepts as an attachment. Mirrors `UploadCapability` in bridge/types.ts.
    *
    * **Absent is a bridge older than the field**, and the phone reads that as the contract that
@@ -955,6 +964,82 @@ export interface SttCapability {
   /** Operator-facing prose when it could not. Absent when it could. */
   reason?: string;
 }
+
+// ── LIVE CALL (the phone's half of the realtime voice call) ──────────────────────────────────────
+//
+// Mirrors the `Live*` wire types in bridge/types.ts, hand-copied like every other shape in this
+// file. The phone never sees the realtime endpoint, the credential or the model: it sends an SDP
+// offer to Collie, gets an answer back, and then reads a phase and two transcript lines.
+
+/**
+ * What `/api/config` says about the live call. Absent is the feature being off — the same omit rule
+ * `stt` follows, and the same reading: no key means no Live button at all, never a disabled one.
+ */
+export interface LiveCapability {
+  /** Whether a call could be signed right now (the operator's Codex login is usable). */
+  available: boolean;
+  /** Operator-facing prose when it could not. Absent when it could. */
+  reason?: string;
+  /** The voice the operator chose. A label to show, never a branch. */
+  voice: string;
+}
+
+/**
+ * Where the BRIDGE thinks the call is. The phone shows a richer word than this — muted and speaking
+ * are facts only the browser holds — so lib/live.ts merges this with the local ones (see its header).
+ */
+export type LivePhase = "connecting" | "listening" | "working" | "ended" | "error";
+
+/**
+ * One line of the call, as the bridge coalesced it. `turn` numbers the exchange, so a later row with
+ * the SAME `role` and `turn` REPLACES the earlier one rather than following it — that is how a
+ * partial transcript grows into its final sentence without the phone stitching text together.
+ */
+export interface LiveTranscriptRow {
+  seq: number;
+  role: "user" | "assistant";
+  turn: number;
+  text: string;
+  final: boolean;
+}
+
+/**
+ * Why a live request was refused. The phone branches on `live.gone` and shows words for the rest.
+ *
+ * The runtime list is the source and the type is derived from it — `MUX_CAPABILITIES` above does the
+ * same, and for the same reason: a wire value has to be CHECKED against something on the way in
+ * (lib/api.ts `liveRefusal`), and a bare union gives a parser nothing to check against.
+ */
+export const LIVE_ERROR_CODES = [
+  "live.off",
+  "live.busy",
+  "live.no_pane",
+  "live.peer_pane",
+  "live.auth",
+  "live.signaling",
+  "live.bad_body",
+  "live.gone",
+] as const;
+
+export type LiveErrorCode = (typeof LIVE_ERROR_CODES)[number];
+
+/** `POST /api/live` — `sdp` is the answer to the offer the phone sent. */
+export type LiveStartResponse =
+  | { ok: true; id: string; sdp: string }
+  | { ok: false; code: LiveErrorCode; error: string };
+
+/** `GET /api/live/:id?after=<seq>` — rows with `seq > after`, ascending. */
+export type LiveViewResponse =
+  | {
+      ok: true;
+      phase: LivePhase;
+      error?: string;
+      seq: number;
+      transcripts: LiveTranscriptRow[];
+    }
+  // `live.gone` is the only refusal a VIEW can carry: every other code is decided while a call is
+  // being started, and by the time there is an id to poll the session either exists or was reaped.
+  | { ok: false; code: "live.gone"; error?: string };
 
 /**
  * Notification type preferences (GET/POST /api/notifications/prefs). Which agent statuses push, set

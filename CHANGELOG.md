@@ -3,7 +3,11 @@
 This file tracks all notable changes to Collie, ordered newest version first. The project follows
 [Semantic Versioning](https://semver.org/). Each version contains a single flat list of changes
 in landing order, oldest first. Every entry links to its commit and credits the contributor where
-there is one. The `## [Unreleased]
+there is one.
+
+## [Unreleased]
+
+- Realtime Live voice calls to an agent in a pane via WebRTC and Codex Desktop's identity (`collie live on`).
 
 ## [1.5.5] - 2026-09-07
 

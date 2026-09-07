@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { ChangeEvent, ClipboardEvent, CSSProperties, ReactNode } from "react";
 import { useRevalidator } from "react-router";
-import { Check, FileText, Image, Keyboard, Loader2, Mic, Paperclip, Send, Settings2, Slash, Square, Terminal, X, Zap } from "lucide-react";
+import { Check, FileText, Image, Keyboard, Loader2, Mic, Paperclip, PhoneCall, Send, Settings2, Slash, Square, Terminal, X, Zap } from "lucide-react";
 
 import { applyDraftFontSize, fontStack, inputFocusZoomsPage } from "@/hooks/use-display-prefs";
 import type { DisplayPrefs } from "@/hooks/use-display-prefs";
@@ -47,6 +47,8 @@ import { DirectTypingStrip } from "@/components/direct-typing-strip";
 import { RecordingStrip } from "@/components/recording-strip";
 import { useSttRecorder } from "@/hooks/use-stt-recorder";
 import { useHandsFree, useSttCapability } from "@/lib/stt";
+import { useLiveCapability } from "@/lib/live";
+import { LiveCallSheet } from "@/components/live-call-sheet";
 import { NoEchoNotice } from "@/components/no-echo-notice";
 
 export interface ComposerHandle {
@@ -478,6 +480,16 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     onTranscript: acceptTranscript,
     onError: (message) => setStatus(message, "error"),
   });
+
+  // ── THE LIVE CALL ─────────────────────────────────────────────────────────────────────────────
+  //
+  // Same two gates the microphone has, one predicate over in lib/live.ts: `null` unless the operator
+  // ran `collie live on` AND this browser can hold a WebRTC call. Absent is the feature being off,
+  // so it draws no button rather than a dead one — and unlike the mic there is no `available: false`
+  // button either, because the reason a call cannot be signed (no Codex login) is fixed on the host
+  // and is already the sheet's first line if it is tapped.
+  const live = useLiveCapability();
+  const [calling, setCalling] = useState(false);
   // ── THE ORBIT TURNS WHILE THE OPERATOR'S WORK IS IN FLIGHT (lib/busy.ts) ───────────────────────
   //
   // Three intervals, declared where the state already lives, so the Collie mark in the header spins
@@ -1615,6 +1627,34 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               )}
             </Button>
           </div>
+          {/* THE LIVE CALL, beside the send/mic button rather than inside the field. It is drawn only
+              when the operator turned the feature on and this browser can hold a call (lib/live.ts),
+              which is a page-load fact and not a state — so the row's width is settled before the
+              first paint and nothing here can move the field or the button to its right (§2).
+
+              It sits OUTSIDE the field's box on purpose: the attach button is inside because it acts
+              on the draft, and this does not — it opens a call that has nothing to do with what is
+              typed. Which is also why it stays put when the box fills: the mic hands its slot to Send
+              at the first character, and a call is not the alternative to sending a message. */}
+          {live?.available === true && (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="size-11 shrink-0 rounded-full"
+              disabled={locked}
+              aria-haspopup="dialog"
+              aria-expanded={calling}
+              aria-label={translate("composer.live.openAria")}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                buzz();
+                setCalling(true);
+              }}
+            >
+              <PhoneCall className="size-4" />
+            </Button>
+          )}
           {!direct.active && forcingSend ? (
             // The pre-flight refused and the user is being offered the override. Labelled for what it
             // actually does — TYPE the text into whatever is on screen — not "send", because the
@@ -1718,6 +1758,18 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         onInsert={insertCommand}
         onSubmit={(t) => send(t, false)}
       />
+
+      {/* The call. Keyed by the pane so switching panes tears the old call down and never carries a
+          session into a terminal it was not started for; mounted only while calling, so the sheet's
+          own open/close effect is the call's whole lifetime (see its header). */}
+      {calling && (
+        <LiveCallSheet
+          key={`${scopeId}\0${paneId}`}
+          open
+          paneId={paneId}
+          onClose={() => setCalling(false)}
+        />
+      )}
     </>
   );
 });

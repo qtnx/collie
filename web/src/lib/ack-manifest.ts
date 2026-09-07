@@ -168,6 +168,14 @@ export const ACK_MANIFEST = {
     channel: "echo",
     why: "The mic strip's `transcribing` phase holds while the clip is in flight and the transcript landing in the composer is the outcome; every refusal comes back as a VALUE and is spoken by the composer's onError on the status channel (hooks/use-stt-recorder.ts).",
   },
+  startLive: {
+    channel: "inline",
+    why: "The answer is the call itself: the sheet's phase line moves from connecting to listening, and a refusal (no Codex sign-in, a call already running, the endpoint saying no) is a standing sentence the operator reads in the same sheet before deciding what to do next (components/live-call-sheet.tsx).",
+  },
+  stopLive: {
+    channel: "silent",
+    why: "End is answered by the sheet closing and the microphone releasing under the thumb; it is also fired from pagehide with nobody left to read a status line.",
+  },
 // `satisfies`, not an annotation: the KEYS stay known to the compiler (so a typo'd name is a type
 // error at any reader, rather than a silent `undefined`), while every entry is still checked against
 // the contract above. An open `Record<string, AckEntry>` annotation would throw that evidence away.

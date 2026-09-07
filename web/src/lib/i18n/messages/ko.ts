@@ -207,6 +207,7 @@ export const ko: Dictionary = {
   "composer.mic.manualHint": "입력창에 텍스트로 삽입",
   "composer.mic.stop": "중지",
   "composer.mic.discardAria": "녹음 취소",
+  "composer.live.openAria": "라이브 통화 시작",
   "composer.attach.aria": "파일 첨부",
   "composer.attach.title": "첨부",
   "composer.attach.photos": "사진",
@@ -670,6 +671,22 @@ export const ko: Dictionary = {
   "stt.error.nothingRecorded": "녹음된 데이터가 없습니다.",
   "stt.error.unsupportedBrowser": "오디오 녹음을 지원하지 않는 브라우저입니다.",
   "stt.error.micRefused": "마이크 접근 권한이 거부되었습니다.",
+
+  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
+  "live.title": "라이브 통화",
+  "live.phase.connecting": "연결 중…",
+  "live.phase.listening": "듣는 중",
+  "live.phase.speaking": "말하는 중",
+  "live.phase.working": "작업 중",
+  "live.phase.muted": "음소거됨",
+  "live.phase.ended": "통화 종료됨",
+  "live.phase.error": "통화 종료됨",
+  "live.mute": "음소거",
+  "live.unmute": "음소거 해제",
+  "live.end": "통화 종료",
+  "live.error.mic": "마이크 접근 권한이 거부되었습니다.",
+  "live.error.gone": "collie에서 통화가 종료되었습니다.",
+  "live.error.generic": "통화가 예기치 않게 종료되었습니다. 다시 시작하세요.",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending": "터미널에 입력하려면 먼저 작성 중인 초안을 전송하거나 삭제하세요.",

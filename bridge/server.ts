@@ -36,6 +36,9 @@ import type { StateEngine } from "./state-engine.ts";
 import { adapterFor, buildJournalRegistry } from "./journal/registry.ts";
 import { TranscriptStore } from "./journal/store.ts";
 import type { JournalAdapter } from "./journal/types.ts";
+import { stripAnsi } from "./journal/text.ts";
+import type { LivePaneResolver, LiveService } from "./live/http.ts";
+import type { PaneAgentPort } from "./live/agent-pane.ts";
 import {
   bearerToken,
   normalizeLabel,
@@ -74,6 +77,10 @@ import type {
   PaneReadResponse,
   PaneWire,
   SnapshotResponse,
+  LiveCapability,
+  LiveStartResponse,
+  LiveStopResponse,
+  LiveViewResponse,
   SttCapability,
   UploadCapability,
   UploadResponse,
@@ -164,6 +171,8 @@ export function isLoopbackPeer(address: string | null | undefined): boolean {
 }
 
 const PANE_ROUTE = /^\/api\/pane\/([^/]+)(?:\/(reply|keys|upload|close|rename|history|focus))?$/;
+
+const LIVE_ROUTE = /^\/api\/live\/([^/]+)(?:\/(stop))?$/;
 
 /**
  * A pairing claim's refusal, as an error code.
@@ -416,6 +425,10 @@ export function bridgeConfigBody(opts: {
    */
   stt?: SttCapability;
   /**
+   * Realtime live calls, when configured. Omitted entirely otherwise.
+   */
+  live?: LiveCapability;
+  /**
    * What this host accepts as an attachment. Optional here for the reason `mux` is — the pack-mode
    * assertions build this body by hand and are about the pack — and always passed by the real
    * handler, so an absent key on the wire means an older bridge and nothing else.
@@ -447,6 +460,7 @@ export function bridgeConfigBody(opts: {
   // Appended after the mux block, and omit-when-absent for the reason `mode` is: no key means no
   // microphone, which is precisely true of a collie with no provider configured.
   if (opts.stt !== undefined) wire.stt = opts.stt;
+  if (opts.live !== undefined) wire.live = opts.live;
   // Same omit-when-absent rule, and the same reading on the other end: no key is an older bridge,
   // which the phone falls back to the pre-attachment contract for (images, 10 MB).
   if (opts.upload !== undefined) wire.upload = opts.upload;
@@ -596,6 +610,11 @@ export function startServer(opts: {
    * answers 503, and one that was never given it does the same.
    */
   stt?: () => Promise<SttProvider | null>;
+  /**
+   * Realtime live voice call service (bridge/live/http.ts).
+   * Absent when not configured.
+   */
+  live?: LiveService;
 }) {
   const { cfg, registry, push, snooze, notifyPrefs, updateMonitor, audit, activity, pack } = opts;
   const pairing = opts.pairing;
@@ -649,6 +668,87 @@ export function startServer(opts: {
     }
     rt.engine.pokeNow();
   };
+
+  const resolvePane: LivePaneResolver = async (paneId: string) => {
+    for (const rt of registry.ordered()) {
+      const pane = [...rt.engine.current().agents, ...rt.engine.current().shellPanes].find(
+        (p) => p.paneId === paneId,
+      );
+      if (pane) {
+        const port: PaneAgentPort = {
+          reply: async (request: string) => {
+            const outcome = await sendReplySteps(rt.herdr, paneId, request, true, cfg.submitKeys);
+            if (outcome.ok) return { ok: true };
+            const reason =
+              outcome.error ??
+              (typeof outcome.detail?.reason === "string" ? outcome.detail.reason : undefined) ??
+              "send failed";
+            return { ok: false, reason };
+          },
+          status: () => {
+            const p = [...rt.engine.current().agents, ...rt.engine.current().shellPanes].find(
+              (a) => a.paneId === paneId,
+            );
+            return p?.status;
+          },
+          history: async () => {
+            if (!cfg.transcript || transcripts === null || journals === null) return null;
+            const p = [...rt.engine.current().agents, ...rt.engine.current().shellPanes].find(
+              (a) => a.paneId === paneId,
+            );
+            if (!p?.agentSession) return null;
+            const adapter = adapterFor(journals, journalAgentOf(p));
+            if (!adapter) return null;
+            try {
+              const page = await transcripts.page(adapter, p.agentSession, { limit: 30 });
+              return page?.entries ?? null;
+            } catch {
+              return null;
+            }
+          },
+          screen: async () => {
+            try {
+              const read = await rt.herdr.readGrid(paneId, {
+                scope: "recent",
+                lines: 80,
+                styling: "preserve",
+              });
+              if (!read.ok) return null;
+              return stripAnsi(read.value.text);
+            } catch {
+              return null;
+            }
+          },
+        };
+        return {
+          port,
+          agent: pane.agent,
+          cwd: pane.cwd,
+          session: rt.name,
+        };
+      }
+    }
+
+    if (packLead) {
+      for (const contrib of packLead.contributions()) {
+        const body = contrib.body;
+        if (body) {
+          const hasPane = [...(body.agents ?? []), ...(body.shellPanes ?? [])].some(
+            (p) => p.paneId === paneId,
+          );
+          if (hasPane) {
+            return { code: "live.peer_pane" };
+          }
+        }
+      }
+    }
+
+    return { code: "live.no_pane" };
+  };
+
+  if (opts.live?.setResolvePane) {
+    opts.live.setResolvePane(resolvePane);
+  }
 
   /**
    * This collie's own snapshot body — the whole of what `/api/snapshot` answered before packs
@@ -1185,6 +1285,7 @@ export function startServer(opts: {
         // live, and this is where the phone learns whether to draw a microphone at all. `?? undefined`
         // because "no provider" must OMIT the key, never send a null one (PACK_PROTOCOL.md §11).
         const sttWire = (await sttCapability(await stt())) ?? undefined;
+        const liveWire = (await opts.live?.capability()) ?? undefined;
         return json(
           bridgeConfigBody({
             push: push.enabled,
@@ -1197,6 +1298,7 @@ export function startServer(opts: {
             operatorFonts: myFonts,
             mux: activeMux?.herdr,
             stt: sttWire,
+            live: liveWire,
             // This host's own limits, read from cfg on every request like everything else here.
             // A pack member answers with ITS number, which is the number that will judge the bytes.
             upload: {
@@ -1509,6 +1611,98 @@ export function startServer(opts: {
         // provider's own words never reach the audit log.
         audit.record({ action: "stt", device: whois(req).device, detail: { ...attempt } });
         return secure(response);
+      }
+
+      // ── Realtime live voice call (bridge/live/) ───────────────────────────
+      if (pathname === "/api/live" && req.method === "POST") {
+        const denied = guard(req, cfg, "write", pairing);
+        if (denied) return denied;
+        const ae = req.headers.get("accept-encoding");
+        if (!opts.live) {
+          return json(
+            { ok: false, code: "live.off", error: "Live call is disabled" } satisfies LiveStartResponse,
+            ae,
+            503,
+          );
+        }
+        let body: JsonValue;
+        try {
+          // SAFETY: req.json() returns a JsonValue; live.start validates the shape.
+          body = (await req.json()) as JsonValue;
+        } catch {
+          return json(
+            { ok: false, code: "live.bad_body", error: "Invalid JSON body" } satisfies LiveStartResponse,
+            ae,
+            400,
+          );
+        }
+        const outcome = await opts.live.start(body);
+        if (outcome.status === 200 && outcome.paneId) {
+          audit.record({
+            action: "live.start",
+            paneId: outcome.paneId,
+            session: outcome.session,
+            device: whois(req).device,
+            detail: {},
+          });
+        }
+        return json(outcome.body, ae, outcome.status);
+      }
+
+      const liveMatch = pathname.match(LIVE_ROUTE);
+      if (liveMatch) {
+        const denied = guard(req, cfg, "write", pairing);
+        if (denied) return denied;
+        const ae = req.headers.get("accept-encoding");
+        const id = decodeURIComponent(liveMatch[1]!);
+        const action = liveMatch[2];
+
+        if (!action && req.method === "GET") {
+          if (!opts.live) {
+            return json(
+              { ok: false, code: "live.gone", error: "Live session not found" } satisfies LiveViewResponse,
+              ae,
+              404,
+            );
+          }
+          const afterRaw = url.searchParams.get("after");
+          const after = afterRaw ? Number.parseInt(afterRaw, 10) : 0;
+          const outcome = opts.live.view(id, Number.isFinite(after) ? after : 0);
+          return json(outcome.body, ae, outcome.status);
+        }
+
+        if (action === "stop" && req.method === "POST") {
+          if (!opts.live) {
+            return json(
+              { ok: false, code: "live.gone", error: "Live session not found" } satisfies LiveStopResponse,
+              ae,
+              404,
+            );
+          }
+          let reason = "user stopped";
+          try {
+            // SAFETY: Request.json() produces a JsonValue; asJsonRecord validates the object structure.
+            const b = asJsonRecord((await req.json()) as JsonValue);
+            if (typeof b?.reason === "string" && b.reason.trim() !== "") {
+              reason = b.reason.trim();
+            }
+          } catch {
+            // Empty body is legal
+          }
+          const outcome = await opts.live.stop(id, reason);
+          if (outcome.status === 200 && outcome.paneId) {
+            audit.record({
+              action: "live.stop",
+              paneId: outcome.paneId,
+              session: outcome.session,
+              device: whois(req).device,
+              detail: { reason },
+            });
+          }
+          return json(outcome.body, ae, outcome.status);
+        }
+
+        return text("method not allowed", 405);
       }
 
       // ── Device pairing (bridge/pairing.ts) ───────────────────────────────

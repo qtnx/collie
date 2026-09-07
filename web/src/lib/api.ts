@@ -9,12 +9,16 @@ import { asJsonString, parseJsonObject } from "./json";
 import { authHeader, clearNotPaired, markNotPaired, NOT_PAIRED_BODY } from "./pairing";
 import { isLead, normalizeScope, paneScopeKey, type Scope } from "./scope";
 import { observeServerBuild, SERVER_BUILD_HEADER } from "./server-build";
+import { LIVE_ERROR_CODES } from "./types";
 import type {
   ActionResponse,
   BridgeConfig,
   CreateResponse,
   DevicesResponse,
   LaunchersResponse,
+  LiveErrorCode,
+  LiveStartResponse,
+  LiveViewResponse,
   NotifyPrefs,
   PaneHistoryResponse,
   PackStatusResponse,
@@ -935,4 +939,103 @@ export function transcribeAudio(audio: Blob, signal?: AbortSignal): Promise<SttR
       };
     })().finally(endLongUpload),
   );
+}
+
+// ── THE LIVE CALL (the three requests a phone makes during one voice call) ──────────────────────
+//
+// The signalling shape is the whole reason these three exist rather than one: a WebRTC offer buys an
+// answer once, and everything after it — what the model heard, what the agent is doing, when it
+// ended — arrives on a poll, because the audio itself never touches Collie. None of the three takes
+// a scope: a call is signed against the lead's own Codex login and delegates into a pane the lead
+// runs, so there is no second machine to address (a pane on a peer is refused with `live.peer_pane`).
+//
+// ALL THREE RESOLVE ON A REFUSAL, like {@link transcribeAudio} and for the same reason: every
+// failure here has a `code` the phone has words for, and a thrown ApiError carries its code only
+// inside a formatted message. A transport failure (offline, timeout) still throws.
+
+/**
+ * The refusal body both reads share, parsed off a non-2xx answer. `null` when it is not one.
+ *
+ * The code is CHECKED against the catalogue rather than asserted into it: this is a wire value, and
+ * a body carrying a code this app has no words for is not this endpoint's contract — it falls
+ * through to the ordinary throw instead of reaching a `t()` call that would find no message.
+ */
+function liveRefusal(detail: string): { code: LiveErrorCode; error: string } | null {
+  const body = parseJsonObject(detail);
+  if (!body || body.ok !== false) return null;
+  const code = LIVE_ERROR_CODES.find((known) => known === asJsonString(body.code));
+  if (code === undefined) return null;
+  return { code, error: asJsonString(body.error) ?? "" };
+}
+
+/**
+ * `POST /api/live` — hand the bridge this browser's SDP offer and get the realtime service's answer.
+ *
+ * `language` is the phone's own locale, which the bridge renders into the model's instructions so
+ * the call is held in the language the operator reads Collie in.
+ */
+export function startLive(body: {
+  paneId: string;
+  sdp: string;
+  language?: string;
+}): Promise<LiveStartResponse> {
+  return req<LiveStartResponse>(
+    "/api/live",
+    { method: "POST", body: JSON.stringify(body) },
+    (_status, detail) => {
+      const refusal = liveRefusal(detail);
+      return refusal === null ? null : { ok: false as const, ...refusal };
+    },
+  );
+}
+
+/**
+ * `GET /api/live/:id?after=<seq>` — the phase and every transcript row past `after`.
+ *
+ * Also the KEEPALIVE: the bridge ends a call it has not been asked about for 20 seconds, so the
+ * poll is what says the phone is still holding it (lib/live.ts polls every second while active).
+ *
+ * `live.gone` is the ONLY refusal this can answer with (bridge/types.ts says the same): every other
+ * code is decided while a call is being started, so by the time there is an id to poll the session
+ * either exists or was reaped. A body carrying anything else is not this endpoint's contract and
+ * falls through to the usual throw.
+ */
+export function pollLive(id: string, after: number): Promise<LiveViewResponse> {
+  return req<LiveViewResponse>(
+    `/api/live/${encodeURIComponent(id)}?after=${after}`,
+    undefined,
+    (_status, detail) => {
+      const refusal = liveRefusal(detail);
+      if (refusal === null || refusal.code !== "live.gone") return null;
+      return { ok: false as const, code: "live.gone" as const, error: refusal.error };
+    },
+  );
+}
+
+/**
+ * `POST /api/live/:id/stop` — end the call. Idempotent; a reaped id answers `live.gone`, which is
+ * the same outcome by another name and never an error the operator should see.
+ *
+ * NOT `req`: this is the one call that must survive its own page. Ending a call is the last thing a
+ * backgrounded or closing tab does (`pagehide`), and a fetch issued there is cancelled with the
+ * document unless it is marked `keepalive` — which would leave the bridge holding a call nobody is
+ * on until its 20-second timer noticed. That flag is incompatible with nothing here: the body is a
+ * few bytes, well under the 64 KiB keepalive ceiling. It also swallows every failure, because there
+ * is no screen left to report one to and the bridge's own timer is the backstop.
+ */
+export async function stopLive(id: string): Promise<void> {
+  try {
+    const res = await apiFetch(`/api/live/${encodeURIComponent(id)}/stop`, {
+      method: "POST",
+      keepalive: true,
+      headers: {
+        "content-type": "application/json",
+        [XHR_HEADER]: XHR_HEADER_VALUE,
+        ...authHeader(),
+      },
+    });
+    captureBuild(res);
+  } catch {
+    // The call is over on this phone either way, and the bridge stops a session nobody polls.
+  }
 }

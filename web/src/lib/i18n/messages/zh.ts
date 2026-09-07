@@ -198,6 +198,7 @@ export const zh: Dictionary = {
   "composer.mic.manualHint": "内容将填入输入框",
   "composer.mic.stop": "停止",
   "composer.mic.discardAria": "放弃录音",
+  "composer.live.openAria": "开始实时通话",
   "composer.attach.aria": "附加文件",
   "composer.attach.title": "添加附件",
   "composer.attach.photos": "照片",
@@ -657,6 +658,22 @@ export const zh: Dictionary = {
   "stt.error.nothingRecorded": "未录制到音频数据。",
   "stt.error.unsupportedBrowser": "当前浏览器不支持音频录制。",
   "stt.error.micRefused": "麦克风访问权限被拒绝。",
+
+  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
+  "live.title": "实时通话",
+  "live.phase.connecting": "正在连接…",
+  "live.phase.listening": "正在聆听",
+  "live.phase.speaking": "正在讲话",
+  "live.phase.working": "正在处理",
+  "live.phase.muted": "已静音",
+  "live.phase.ended": "通话已结束",
+  "live.phase.error": "通话已结束",
+  "live.mute": "静音",
+  "live.unmute": "取消静音",
+  "live.end": "结束通话",
+  "live.error.mic": "麦克风访问权限被拒绝。",
+  "live.error.gone": "通话已在 collie 上结束。",
+  "live.error.generic": "通话意外结束，请重新开始。",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending": "直接输入终端前，需先发送或清空草稿。",

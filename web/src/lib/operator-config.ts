@@ -4,6 +4,7 @@ import { fetchConfig } from "@/lib/api";
 import { acceptOperatorFonts, applyOperatorFonts, type OperatorFontFace } from "@/lib/operator-fonts";
 import { designPrefs, subscribeDesign } from "@/lib/design";
 import type {
+  LiveCapability,
   MuxConfig,
   OperatorCommand,
   OperatorKeyRow,
@@ -56,6 +57,10 @@ let currentMux: MuxConfig | null = null;
 // are the same value on purpose, because both mean "there is no microphone here" (ADR 0029). Absent
 // is the feature being off, so nothing has to distinguish them.
 let currentStt: SttCapability | null = null;
+// `null` until a read succeeds AND on every bridge whose operator never ran `collie live on` — the
+// same reading `currentStt` gets one line above, and for the same reason: absent is the feature
+// being off, so there is no third state to distinguish.
+let currentLive: LiveCapability | null = null;
 // `null` until a read succeeds AND on every bridge older than the field. The two are the same value
 // on purpose: both mean "nothing said otherwise", and lib/attachments.ts answers both with the
 // contract that shipped before attachments existed — 10 MB, images only.
@@ -86,6 +91,7 @@ export function loadOperatorCommands(): Promise<void> {
       applyOperatorFonts(currentFonts, designPrefs().font);
       currentMux = cfg.mux ?? null;
       currentStt = cfg.stt ?? null;
+      currentLive = cfg.live ?? null;
       currentUpload = cfg.upload ?? null;
       loaded = true;
       emit();
@@ -135,6 +141,15 @@ export function getMuxConfig(): MuxConfig | null {
  */
 export function getSttCapability(): SttCapability | null {
   return currentStt;
+}
+
+/**
+ * The live-call block, or `null` when nothing said otherwise (no read yet, a failed read, or a
+ * bridge whose operator never turned it on). Consumers go through lib/live.ts, which owns the rule
+ * that turns this plus the browser's own WebRTC support into "draw the button or don't".
+ */
+export function getLiveCapability(): LiveCapability | null {
+  return currentLive;
 }
 
 /**
@@ -232,6 +247,7 @@ export function __resetOperatorCommands(): void {
   currentFonts = [];
   currentMux = null;
   currentStt = null;
+  currentLive = null;
   currentUpload = null;
   inflight = null;
   loaded = false;

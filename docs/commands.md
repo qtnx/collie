@@ -26,6 +26,7 @@ If the host runs multiple instances, prepend `COLLIE_INSTANCE=<name>` to every v
 | **Link** | `collie link` · `collie unlink` | Put `collie` on your PATH ([below](#put-collie-on-your-path)) |
 | **Logs** | `collie logs` | Tail the journal / log file |
 | **Voice** | `collie stt setup` · `stt test` · `stt status` · `stt off` | Configure / check / disable [voice input](voice-and-push.md#voice-input-optional) |
+| **Live call** | `collie live on` · `live status` · `live off` | Enable / check / disable realtime [live calls](voice-and-push.md#live-call-optional) |
 | **Push keys** | `collie push-keys` | Generate the VAPID keypair into your `.env` |
 | **Push test** | `collie push-test` | Send one notification to prove it works |
 
@@ -88,7 +89,7 @@ Collie registers these actions in `herdr-plugin.toml`. Invoke them with
 | `push-keys` | `collie push-keys` | Write a VAPID keypair into the `.env` the service reads |
 | `push-test` | `collie push-test` | Push one notification to every subscribed device |
 
-`qr`, `pair`, `devices`, `link`, `logs`, and `stt` have no corresponding plugin action because they
+`qr`, `pair`, `devices`, `link`, `logs`, `stt`, and `live` have no corresponding plugin action because they
 require a terminal, positional arguments, or both. Run them as `collie <verb>`.
 
 **Herdr actions return Herdr's JSON envelope instead of the terminal banner.** View the action's

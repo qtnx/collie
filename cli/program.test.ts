@@ -78,6 +78,7 @@ const PUSH_VERBS = ["push"];
 // operator's own terminal is the only right place to configure, because they mint or accept a
 // credential.
 const STT_VERBS = ["stt"];
+const LIVE_VERBS = ["live"];
 
 function capture(): Io & { stdout: string[]; stderr: string[] } {
   const stdout: string[] = [];
@@ -95,6 +96,7 @@ describe("the verb table", () => {
       ...PAIRING_VERBS,
       ...PUSH_VERBS,
       ...STT_VERBS,
+      ...LIVE_VERBS,
       ...PACK_VERBS,
       "help",
     ]);
@@ -237,6 +239,9 @@ describe("the subcommand trees", () => {
   test("`stt` declares exactly `cli/stt.ts`'s sub-verbs, in its order", () => {
     expect(findCommand("stt")?.subcommands?.map((s) => s.name)).toEqual([...STT_SUBCOMMANDS]);
   });
+  test("`live` declares exactly `cli/live.ts`'s sub-verbs, in its order", () => {
+    expect(findCommand("live")?.subcommands?.map((s) => s.name)).toEqual(["on", "off", "status"]);
+  });
 
   test("no other verb declares a tree — the grammar is one level deep everywhere else", () => {
     expect(COMMANDS.filter((c) => c.subcommands !== undefined).map((c) => c.name)).toEqual([
@@ -245,6 +250,7 @@ describe("the subcommand trees", () => {
       "devices",
       "push",
       "stt",
+      "live",
       "pack",
     ]);
   });
@@ -346,6 +352,7 @@ describe("exit codes", () => {
       // sub-verb resolves that same real dir before it decides anything. cli/stt.test.ts drives all
       // four against fakes.
       ...STT_VERBS,
+      ...LIVE_VERBS,
       // `hooks` edits the developer's own ~/.claude/settings.json, and `hooks status` resolves the
       // same real paths before it reads them. cli/hooks.test.ts drives all three against fakes.
       // `beacon` is world-touching in the other direction: it would write a beacon into this host's

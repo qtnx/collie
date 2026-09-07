@@ -74,6 +74,14 @@ import {
   STT_SUBCOMMANDS,
   type SttDeps,
 } from "./stt.ts";
+import {
+  cmdLive,
+  cmdLiveOff,
+  cmdLiveOn,
+  cmdLiveStatus,
+  LIVE_SUBCOMMANDS,
+  type LiveDeps,
+} from "./live.ts";
 import { realExec, realFiles } from "./sys.ts";
 import { cmdApplyUpdate, cmdUpdate } from "./update.ts";
 import { cmdUpdateCheck, updateCheckDeps, wantsCheck } from "./update-check.ts";
@@ -219,6 +227,21 @@ function hooksDeps(io: Io): HooksDeps {
  * question IS the consent (ADR 0029).
  */
 function sttDeps(io: Io): SttDeps {
+  const ctx = loadContext(io.err);
+  return {
+    ctx,
+    io,
+    files: realFiles,
+    exec: realExec(ctx.env, ctx.home),
+    interactive: process.stdin.isTTY === true,
+    prompt: (question) => (process.stdin.isTTY === true ? prompt(question) : null),
+  };
+}
+
+/**
+ * `live`: context, filesystem, exec to locate `codex`, and terminal prompt for consent.
+ */
+function liveDeps(io: Io): LiveDeps {
   const ctx = loadContext(io.err);
   return {
     ctx,
@@ -510,6 +533,29 @@ export const COMMANDS: readonly Command[] = [
     ],
     // Bare or misspelt lands here, and `cmdStt` owns that message — as `cmdDevices` does.
     run: (args, s) => cmdStt(sttDeps(s.io), args),
+  },
+  // ── Live calls ─────────────────────────────────────────────────────────────
+  {
+    name: "live",
+    summary: `realtime live voice call (off until you run it): ${LIVE_SUBCOMMANDS.join(", ")}`,
+    subcommands: [
+      {
+        name: "on",
+        summary: "enable live voice call (--voice <name>, --yes)",
+        run: (args, s) => cmdLiveOn(liveDeps(s.io), args),
+      },
+      {
+        name: "off",
+        summary: "remove live.json — live voice calls are disabled",
+        run: (_args, s) => cmdLiveOff(liveDeps(s.io)),
+      },
+      {
+        name: "status",
+        summary: "show live call configuration and codex binary status",
+        run: (_args, s) => cmdLiveStatus(liveDeps(s.io)),
+      },
+    ],
+    run: (args, s) => cmdLive(liveDeps(s.io), args),
   },
   // ── The pack (M4/07) ───────────────────────────────────────────────────────
   // The only way a machine enters or leaves a pack. Every one of them resolves its seams through

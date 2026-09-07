@@ -210,6 +210,7 @@ export const es: Dictionary = {
   "composer.mic.manualHint": "Se insertará en el campo de texto",
   "composer.mic.stop": "Detener",
   "composer.mic.discardAria": "Descartar grabación",
+  "composer.live.openAria": "Iniciar llamada en vivo",
   "composer.attach.aria": "Adjuntar archivo",
   "composer.attach.title": "Adjuntar",
   "composer.attach.photos": "Fotos",
@@ -680,6 +681,22 @@ export const es: Dictionary = {
   "stt.error.nothingRecorded": "No se registró audio.",
   "stt.error.unsupportedBrowser": "Este navegador no soporta grabación de audio.",
   "stt.error.micRefused": "Permiso de micrófono denegado.",
+
+  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
+  "live.title": "Llamada en vivo",
+  "live.phase.connecting": "Conectando…",
+  "live.phase.listening": "Escuchando",
+  "live.phase.speaking": "Hablando",
+  "live.phase.working": "Trabajando en ello",
+  "live.phase.muted": "Silenciado",
+  "live.phase.ended": "Llamada finalizada",
+  "live.phase.error": "Llamada finalizada",
+  "live.mute": "Silenciar",
+  "live.unmute": "Activar micrófono",
+  "live.end": "Finalizar llamada",
+  "live.error.mic": "Permiso de micrófono denegado.",
+  "live.error.gone": "La llamada terminó en el collie.",
+  "live.error.generic": "La llamada terminó de forma inesperada. Vuelve a iniciarla.",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending":

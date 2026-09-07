@@ -172,7 +172,10 @@ class CodexAppServerAuthBroker implements CodexAuthBroker {
   private async fetchToken(refresh: boolean): Promise<CodexAccessToken> {
     const auth = await this.authenticatedStatus(true, refresh);
     if (auth.authToken === null || auth.authToken === "") {
-      throw this.remember("Codex did not hand back an access token");
+      // `authMethod: chatgpt` with no token is what Codex answers once its refresh token has been
+      // revoked (app-server withholds the token on a permanent refresh failure), so the sentence
+      // names the one thing that repairs it.
+      throw this.remember("Codex did not hand back an access token — its sign-in has likely expired; run `codex login` again");
     }
     return { accessToken: auth.authToken };
   }

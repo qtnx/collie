@@ -842,6 +842,12 @@ export interface BridgeConfig {
    */
   stt?: SttCapability;
   /**
+   * What `/api/config` says about realtime live voice calls.
+   *
+   * Carries availability and the selected voice. Absent when the feature is off (`live.json` missing).
+   */
+  live?: LiveCapability;
+  /**
    * What this collie accepts as an attachment. **Absent is a bridge older than this field**, which
    * a client reads as the contract that shipped before it: 10 MB, images only. Present, it is the
    * whole answer — the phone builds its file picker's `accept` list from it and refuses an oversize
@@ -881,6 +887,57 @@ export interface SttCapability {
   /** Operator-facing prose when it could not. Absent when it could. */
   reason?: string;
 }
+
+/**
+ * What `/api/config` says about realtime live call capability.
+ */
+export interface LiveCapability {
+  /** Whether the Codex authentication broker is available to serve a call. */
+  available: boolean;
+  /** Operator-facing prose when unavailable. Absent when available. */
+  reason?: string;
+  /** Configured TTS voice name (e.g. "sol"). */
+  voice: string;
+}
+
+/** Phase of an active live call session. */
+export type LivePhase = "connecting" | "listening" | "working" | "ended" | "error";
+
+/** A single live transcript segment from either user or assistant. */
+export interface LiveTranscriptRow {
+  seq: number;
+  role: "user" | "assistant";
+  /** Role-local turn number; a later row with the same role+turn replaces the earlier one. */
+  turn: number;
+  text: string;
+  final: boolean;
+}
+
+/** Specific machine-readable refusal or error code for live calls. */
+export type LiveErrorCode =
+  | "live.off"
+  | "live.busy"
+  | "live.no_pane"
+  | "live.peer_pane"
+  | "live.auth"
+  | "live.signaling"
+  | "live.bad_body"
+  | "live.gone";
+
+/** Response shape for `POST /api/live`. */
+export type LiveStartResponse =
+  | { ok: true; id: string; sdp: string }
+  | { ok: false; code: LiveErrorCode; error: string };
+
+/** Response shape for `GET /api/live/:id?after=N`. */
+export type LiveViewResponse =
+  | { ok: true; phase: LivePhase; error?: string; seq: number; transcripts: LiveTranscriptRow[] }
+  | { ok: false; code: "live.gone"; error?: string };
+
+/** Response shape for `POST /api/live/:id/stop`. */
+export type LiveStopResponse =
+  | { ok: true }
+  | { ok: false; code: "live.gone"; error?: string };
 
 /** Rank for triage ordering — lower sorts first ("NEEDS YOU" at the top). */
 export const STATUS_RANK = {

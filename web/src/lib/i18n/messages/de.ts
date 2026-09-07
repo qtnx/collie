@@ -212,6 +212,7 @@ export const de: Dictionary = {
   "composer.mic.manualHint": "Wird in das Eingabefeld eingefügt",
   "composer.mic.stop": "Stopp",
   "composer.mic.discardAria": "Aufnahme verwerfen",
+  "composer.live.openAria": "Live-Anruf starten",
   "composer.attach.aria": "Datei anhängen",
   "composer.attach.title": "Anhängen",
   "composer.attach.photos": "Fotos",
@@ -682,6 +683,22 @@ export const de: Dictionary = {
   "stt.error.nothingRecorded": "Es wurden keine Audiodaten aufgenommen.",
   "stt.error.unsupportedBrowser": "Dieser Browser unterstützt keine Audioaufnahme.",
   "stt.error.micRefused": "Der Zugriff auf das Mikrofon wurde verweigert.",
+
+  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
+  "live.title": "Live-Anruf",
+  "live.phase.connecting": "Verbinden…",
+  "live.phase.listening": "Hört zu",
+  "live.phase.speaking": "Spricht",
+  "live.phase.working": "Arbeitet daran",
+  "live.phase.muted": "Stummgeschaltet",
+  "live.phase.ended": "Anruf beendet",
+  "live.phase.error": "Anruf beendet",
+  "live.mute": "Stumm",
+  "live.unmute": "Stummschaltung aus",
+  "live.end": "Anruf beenden",
+  "live.error.mic": "Der Zugriff auf das Mikrofon wurde verweigert.",
+  "live.error.gone": "Der Anruf wurde auf dem Collie beendet.",
+  "live.error.generic": "Der Anruf wurde unerwartet beendet. Starte ihn erneut.",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending":

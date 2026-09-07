@@ -208,6 +208,7 @@ export const ja: Dictionary = {
   "composer.mic.manualHint": "メッセージ入力欄に挿入されます",
   "composer.mic.stop": "停止",
   "composer.mic.discardAria": "録音を破棄",
+  "composer.live.openAria": "ライブ通話を開始",
   "composer.attach.aria": "ファイルを添付",
   "composer.attach.title": "添付",
   "composer.attach.photos": "写真",
@@ -672,6 +673,22 @@ export const ja: Dictionary = {
   "stt.error.nothingRecorded": "録音データが空です。",
   "stt.error.unsupportedBrowser": "使用中のブラウザは音声録音に対応していません。",
   "stt.error.micRefused": "マイクへのアクセスが拒否されました。",
+
+  // --- live (the voice call, lib/live.ts + components/live-call-sheet.tsx) ---
+  "live.title": "ライブ通話",
+  "live.phase.connecting": "接続中…",
+  "live.phase.listening": "聞いています",
+  "live.phase.speaking": "話しています",
+  "live.phase.working": "作業中",
+  "live.phase.muted": "ミュート中",
+  "live.phase.ended": "通話終了",
+  "live.phase.error": "通話終了",
+  "live.mute": "ミュート",
+  "live.unmute": "ミュート解除",
+  "live.end": "通話を終了",
+  "live.error.mic": "マイクへのアクセスが拒否されました。",
+  "live.error.gone": "collie 側で通話が終了しました。",
+  "live.error.generic": "通話が予期せず終了しました。もう一度開始してください。",
 
   // --- directTyping (the composer's "Type into terminal" mode, hooks/use-direct-typing.ts) ---
   "directTyping.status.draftPending":

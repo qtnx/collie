@@ -553,6 +553,7 @@ describe("solo zero-tax — routes", () => {
   test("server.ts registers exactly today's routes", () => {
     expect(declaredRoutes()).toEqual([
       "/",
+      "/^\\/api\\/live\\/([^/]+)(?:\\/(stop))?$/",
       // `focus` is the pane action that moves the OPERATOR's own terminal, and it is named here for
       // the reason every other one is: a route arrives on purpose or it does not arrive.
       "/^\\/api\\/pane\\/([^/]+)(?:\\/(reply|keys|upload|close|rename|history|focus))?$/",
@@ -579,6 +580,9 @@ describe("solo zero-tax — routes", () => {
       // read-gated through the same closure `/api/launch` rides, so a `?host=` call forwards to
       // the peer that runs the rows rather than reading the lead's own file.
       "/api/launchers",
+      // Realtime live call start (bridge/live/) — a SOLO feature that legitimately extends this list,
+      // named here rather than exempted. It is off until an operator runs `collie live on`.
+      "/api/live",
       "/api/notifications/prefs",
       "/api/notifications/snooze",
       // The Pack overview (bridge/pack/status-wire.ts) — a FRONT-DOOR route, and it legitimately
@@ -789,6 +793,9 @@ const STATE_DIR_ENTRIES = [
   // READS it, and the emitter that fills it is a CLI verb the operator installs a hook for. An
   // instance whose operator never ran `collie hooks install` never has this directory at all.
   "beacons",
+  // Realtime live call settings. Absent until the operator runs `collie live on`, and READ ONLY
+  // by the bridge — `bridge/live/config.ts` names this path and never writes it.
+  "live.json",
   "notify-prefs.json",
   // Device pairing. Both are absent until the operator runs `collie pair`, and an install that
   // never does keeps writing exactly the six entries above it.

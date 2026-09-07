@@ -40,6 +40,9 @@ import { NotificationCoordinator, makeNotifySink, type NotifyClock } from "./not
 import { NotifyPrefsStore } from "./notify-prefs.ts";
 import { filePairingIo, PairingStore } from "./pairing.ts";
 import { createSttGate } from "./stt/index.ts";
+import { createLiveSettingsReader } from "./live/config.ts";
+import { createLiveService } from "./live/http.ts";
+import { createCodexAuthBroker } from "./stt/codex-auth.ts";
 import { runBootGate } from "./pack/boot-gate.ts";
 import { PEER_BROWSER_ENV, resolvePackRuntime, warnsOnWildcardBind } from "./pack/config.ts";
 import {
@@ -553,6 +556,17 @@ const currentVersion = (
 // cannot change without a restart. Bare: no `(manifest; web not built)` parenthetical on the wire,
 // or a machine with an unbuilt bundle would read as skewed against every peer including itself.
 const packVersion = collieVersionBare(rootDir);
+
+// Realtime live voice calls (bridge/live/). Re-reads `<stateDir>/live.json` per request behind
+// an mtime check. An absent file is the feature being off.
+const live = createLiveService({
+  settings: createLiveSettingsReader({
+    stateDir: cfg.stateDir,
+    warn: (message) => console.warn(`[live] ${message}`),
+  }),
+  broker: (codexBin) => createCodexAuthBroker({ codexBin, clientVersion: packVersion }),
+  resolvePane: async () => ({ code: "live.no_pane" }),
+});
 
 const updateStore = new UpdateStateStore(cfg);
 await updateStore.load();
@@ -1587,6 +1601,7 @@ const server = startServer({
   pack,
   pairing,
   stt,
+  live,
   packLead,
   packStatus,
   peerNotifier,
@@ -1679,6 +1694,7 @@ const shutdown = async () => {
   // The codex speech-to-text provider owns a `codex app-server` child (bridge/stt/codex-auth.ts).
   // A no-op when speech-to-text is off, or configured to a provider that holds nothing open.
   stt.close();
+  live.close();
   // Writes are debounced, so the last few seconds of "you looked at this" live only in memory —
   // persist them before exiting, or every restart quietly resurrects alerts you'd already cleared.
   activity.stop();

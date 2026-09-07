@@ -1,7 +1,7 @@
-# Voice input and Web Push
+# Voice input, Live call, and Web Push
 
-Both features are disabled by default. You can enable a microphone button in the composer, and
-browser notifications that trigger when an agent is waiting for input.
+These features are disabled by default. You can enable voice dictation, realtime live voice calls,
+and browser notifications when an agent is waiting for input.
 
 ## Voice input (optional)
 
@@ -157,6 +157,31 @@ you already trust stays the only thing that touches it.
 The reasoning for all of the above — why this was declined twice, what changed, and why the seam
 looks like this — is [ADR 0029](../.adr/0029-speech-to-text-is-a-provider-seam-collie-owns.md).
 
+
+## Live call (optional)
+
+A **realtime voice call to an agent in a pane**, with direct WebRTC audio between the phone and OpenAI.
+The model can delegate terminal tasks directly into the active pane, watch the agent work, and read out
+answers when the agent finishes.
+
+```bash
+bin/collie live on                  # 1. enable live calls (interactive prompt)
+bin/collie live on --voice ember    #    pick a voice (sol, ember, juniper, ...)
+bin/collie live status              # 2. verify configuration and codex binary
+bin/collie live off                 # 3. disable live calls (no restart needed)
+```
+
+To start using live calls:
+
+1. Sign in with the Codex CLI on the host using `codex login`.
+2. Run `collie live on` to enable the feature.
+3. Open a pane in Collie on your phone to find the **Live** button next to the composer.
+4. Tap the button to open the call sheet and speak directly with the agent.
+
+> **Security.** The live call connects via a private ChatGPT endpoint wearing Codex Desktop's identity
+> with the operator's own ChatGPT account login; rate-limit and ban exposure is yours, and the private
+> endpoint may change or break without notice. Microphone audio travels directly from the phone browser
+> to OpenAI via WebRTC, never passing through the Collie bridge host.
 
 ## Web Push (optional)
 
