@@ -99,6 +99,8 @@ export interface LivePeerDeps {
   onLevels?(input: number, output: number): void;
   /** Fatal failure; the call is over. */
   onFailure?(message: string): void;
+  /** The WebRTC transport reached `connected`: audio flows from here on. Fired once. */
+  onConnected?(): void;
   /** Local-only cue played once the WebRTC transport reaches `connected`. */
   playConnectedCue?(): void | Promise<void>;
   /** Scheduler seam so tests do not depend on wall-clock timers. */
@@ -222,6 +224,7 @@ export class LivePeer {
   #startConnectedCue(): void {
     if (this.#stopped || this.#connectedCueStarted) return;
     this.#connectedCueStarted = true;
+    this.#deps.onConnected?.();
     const play = this.#deps.playConnectedCue;
     if (!play) return;
 

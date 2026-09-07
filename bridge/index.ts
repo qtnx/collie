@@ -43,6 +43,7 @@ import { createSttGate } from "./stt/index.ts";
 import { createLiveSettingsReader } from "./live/config.ts";
 import { createLiveService } from "./live/http.ts";
 import { createCodexAuthBroker } from "./stt/codex-auth.ts";
+import { createOmpTokenBroker } from "./live/omp-auth.ts";
 import { runBootGate } from "./pack/boot-gate.ts";
 import { PEER_BROWSER_ENV, resolvePackRuntime, warnsOnWildcardBind } from "./pack/config.ts";
 import {
@@ -574,6 +575,7 @@ const live = createLiveService({
     warn: (message) => console.warn(`[live] ${message}`),
   }),
   broker: (codexBin) => createCodexAuthBroker({ codexBin, clientVersion: packVersion }),
+  ompBroker: (ompxBin) => createOmpTokenBroker({ ompxBin }),
   resolvePane: async () => ({ code: "live.no_pane" }),
   operator: liveOperator,
 });

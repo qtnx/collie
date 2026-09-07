@@ -89,6 +89,10 @@ export class LiveSession {
   /** Events after terminal cleanup are ignored; `session.started` may land before connect() resolves. */
   handleEvent(event: LiveServerEvent): void {
     if (this.stopped) return;
+    // The sideband does not always replay `session.started` (observed: it opens before the media
+    // path does and then receives only later traffic), so ANY non-error event proves the session
+    // is up. The phone additionally flips itself on its own data channel opening.
+    if (this.phase === "connecting" && event.type !== "error") this.phase = "listening";
     switch (event.type) {
       case "session.started":
         this.phase = "listening";

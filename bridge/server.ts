@@ -1709,11 +1709,15 @@ export function startServer(opts: {
 
       const liveMatch = pathname.match(LIVE_ROUTE);
       if (liveMatch) {
-        const denied = guard(req, cfg, "write", pairing);
-        if (denied) return denied;
         const ae = req.headers.get("accept-encoding");
         const id = decodeURIComponent(liveMatch[1]!);
         const action = liveMatch[2];
+        // The poll is a READ, exactly like `GET /api/pane/:id`: a browser sends no `Origin` on a
+        // GET, so the write gate's same-origin demand would refuse every poll of a call it just
+        // started. What the poll reveals is this call's own transcript, behind an unguessable id.
+        // Starting and stopping stay write-gated.
+        const denied = guard(req, cfg, !action && req.method === "GET" ? "read" : "write", pairing);
+        if (denied) return denied;
 
         if (!action && req.method === "GET") {
           if (!opts.live) {

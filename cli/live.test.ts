@@ -115,6 +115,7 @@ describe("collie live on", () => {
     const parsed = JSON.parse(entry!.text) as {
       voice: string;
       codexBin: string;
+      auth: string;
       agent?: { kind: string; bin: string; model: string };
     };
     expect(parsed.agent).toEqual({
@@ -122,7 +123,18 @@ describe("collie live on", () => {
       bin: "/fake/ompx",
       model: "openai-codex/gpt-5.6-luna",
     });
+    // The operator agent runs on ompx, so omp's sign-in is the default one borrowed for the call.
+    expect(parsed.auth).toBe("ompx");
     expect(d.io.stdout.join("\n")).toContain("agent: ompx [openai-codex/gpt-5.6-luna]");
+  });
+
+  test("--auth ompx without --agent ompx is refused, and --auth codex keeps the Codex CLI", async () => {
+    expect(await cmdLiveOn(testDeps(), ["--auth", "ompx", "--yes"])).toBe(EXIT.USAGE);
+    const d = testDeps();
+    expect(await cmdLiveOn(d, ["--agent", "ompx", "--auth", "codex", "--yes"])).toBe(EXIT.OK);
+    // SAFETY: cmdLiveOn writes this structure.
+    const parsed = JSON.parse(d.files.entries.get(LIVE_CONFIG_PATH)!.text) as { auth: string };
+    expect(parsed.auth).toBe("codex");
   });
 
   test("enables live with --agent ompx and custom --model", async () => {

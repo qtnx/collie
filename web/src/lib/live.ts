@@ -52,6 +52,11 @@ export interface LiveState {
   paneId: string | null;
   /** The bridge's own last word, or `connecting` before the first poll lands. */
   bridgePhase: LivePhase;
+  /**
+   * The peer connection reached `connected`. The bridge's sideband does not always see the
+   * session start, so this browser's own transport is what moves `connecting` to `listening`.
+   */
+  mediaUp: boolean;
   muted: boolean;
   /** Assistant output level, 0..1, sampled every 100 ms. Drives the `speaking` phase. */
   outputLevel: number;
@@ -66,6 +71,7 @@ const IDLE: LiveState = {
   status: "idle",
   paneId: null,
   bridgePhase: "connecting",
+  mediaUp: false,
   muted: false,
   outputLevel: 0,
 };
@@ -150,11 +156,12 @@ export function phoneLivePhase(
   bridgePhase: LivePhase,
   muted: boolean,
   outputLevel: number,
+  mediaUp = false,
 ): PhoneLivePhase {
   if (bridgePhase === "ended" || bridgePhase === "error") return bridgePhase;
   if (muted) return "muted";
   if (bridgePhase === "working") return "working";
-  if (bridgePhase === "connecting") return "connecting";
+  if (bridgePhase === "connecting" && !mediaUp) return "connecting";
   return outputLevel > SPEAKING_LEVEL ? "speaking" : "listening";
 }
 
@@ -251,6 +258,7 @@ export async function startCall(paneId: string, audioElement: HTMLAudioElement):
     status: "connecting",
     paneId,
     bridgePhase: "connecting",
+    mediaUp: false,
     muted: false,
     outputLevel: 0,
     user: undefined,
@@ -278,6 +286,9 @@ export async function startCall(paneId: string, audioElement: HTMLAudioElement):
     },
     onFailure: (message) => {
       void endCall(message);
+    },
+    onConnected: () => {
+      if (state.status === "active" || state.status === "connecting") setState({ mediaUp: true });
     },
   });
   peer = call;

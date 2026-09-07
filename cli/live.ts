@@ -1,6 +1,8 @@
 import { DEFAULT_LIVE_VOICE, LIVE_VOICES } from "../bridge/live/protocol.ts";
 import {
   DEFAULT_OPERATOR_MODEL,
+  LIVE_AUTH_SOURCES,
+  type LiveAuthSource,
   type LiveSettings,
   liveSettingsPath,
   type OperatorAgentSettings,
@@ -51,6 +53,7 @@ export async function cmdLiveOn(
   let model: string = DEFAULT_OPERATOR_MODEL;
   let hasModel = false;
   let yes = false;
+  let authArg: string | null = null;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === "--yes" || arg === "-y") {
@@ -93,6 +96,15 @@ export async function cmdLiveOn(
     } else if (arg.startsWith("--model=")) {
       model = arg.slice("--model=".length);
       hasModel = true;
+    } else if (arg === "--auth") {
+      i++;
+      if (i >= args.length) {
+        deps.io.err("error: --auth requires a source (codex or ompx)");
+        return EXIT.USAGE;
+      }
+      authArg = args[i]!;
+    } else if (arg.startsWith("--auth=")) {
+      authArg = arg.slice("--auth=".length);
     } else {
       deps.io.err(`error: unknown option \`${arg}\``);
       return EXIT.USAGE;
@@ -106,6 +118,17 @@ export async function cmdLiveOn(
 
   if (agentKind !== null && agentKind !== "ompx") {
     deps.io.err(`error: unknown agent "${agentKind}" (expected ompx)`);
+    return EXIT.USAGE;
+  }
+  if (authArg !== null && !LIVE_AUTH_SOURCES.some((s) => s === authArg)) {
+    deps.io.err(`error: unknown auth "${authArg}" (expected ${LIVE_AUTH_SOURCES.join(", ")})`);
+    return EXIT.USAGE;
+  }
+  // omp's sign-in when the operator agent already runs on ompx; the Codex CLI's otherwise. Either
+  // binary is the one whose login is borrowed, so the default follows the binary already resolved.
+  const auth: LiveAuthSource = authArg === "codex" || authArg === "ompx" ? authArg : agentKind === "ompx" ? "ompx" : "codex";
+  if (auth === "ompx" && agentKind !== "ompx") {
+    deps.io.err("error: --auth ompx needs --agent ompx (that is the binary whose sign-in is borrowed)");
     return EXIT.USAGE;
   }
 
@@ -163,7 +186,7 @@ export async function cmdLiveOn(
   // The RESOLVED path, never the bare name: the bridge runs under systemd with a PATH that does not
   // include the operator's npm/bun bin dirs, so a bare `codex` in live.json spawns nothing there.
   // Same rule `collie stt setup` follows (cli/stt.ts locateCodex).
-  const configData: LiveSettings = { voice, codexBin: which };
+  const configData: LiveSettings = { voice, codexBin: which, auth };
   if (agentConfig !== undefined) {
     configData.agent = agentConfig;
   }
@@ -232,6 +255,8 @@ export function cmdLiveStatus(deps: LiveDeps): number {
     deps.io.out(
       `  codex-bin: ${codexBin}${found !== null ? ` (${found})` : " [NOT FOUND ON PATH]"}`,
     );
+    const auth = jsonStringField(raw?.auth)?.trim() || "codex";
+    deps.io.out(`  auth:      ${auth === "ompx" ? "ompx (`ompx token openai-codex`)" : "codex (`codex app-server`)"}`);
     const agentObj = jsonRecord(raw?.agent);
     if (agentObj !== null) {
       const agentKind = jsonStringField(agentObj.kind)?.trim() || "ompx";

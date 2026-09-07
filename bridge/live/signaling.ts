@@ -1,5 +1,7 @@
+import type { JsonValue } from "../json.ts";
 import { accountIdFromJwt } from "../stt/codex.ts";
 import type { CodexAuthBroker } from "../stt/codex-auth.ts";
+import { jsonRecord, jsonStringField } from "../stt/json.ts";
 import {
   buildLiveSessionPayload,
   type LiveClientMessage,
@@ -90,6 +92,20 @@ export function buildLiveSidebandUrl(callId: string): string {
   return url.toString();
 }
 
+/** `error.code` from a refusal body, bounded and identifier-shaped, or empty when there is none. */
+function parseRefusalCode(body: string): string {
+  let parsed: JsonValue;
+  try {
+    // SAFETY: `JSON.parse` output IS a JsonValue by construction; every field is narrowed below.
+    parsed = JSON.parse(body) as JsonValue;
+  } catch {
+    return "";
+  }
+  const error = jsonRecord(jsonRecord(parsed)?.error);
+  const code = error === null ? null : jsonStringField(error.code);
+  return code !== null && /^[\w.-]{1,64}$/.test(code) ? code : "";
+}
+
 /** Create a transport whose I/O seams keep signaling and socket behavior testable. */
 export function createCodexLiveTransport(deps: CodexLiveTransportDeps): LiveControlTransport {
   const fetchImpl = deps.fetch ?? fetch;
@@ -139,7 +155,15 @@ export function createCodexLiveTransport(deps: CodexLiveTransportDeps): LiveCont
         }
         continue;
       }
-      if (!response.ok) throw new LiveSignalingError("signaling", `Codex live signaling refused the call (${response.status})`);
+      if (!response.ok) {
+        // The endpoint's own `error.code` (an identifier like `invalid_offer`, never prose that could
+        // name the account) rides the journal line; the phone still sees the status alone.
+        const refusal = parseRefusalCode(await response.text().catch(() => ""));
+        throw new LiveSignalingError(
+          "signaling",
+          `Codex live signaling refused the call (${response.status}${refusal ? ` ${refusal}` : ""})`,
+        );
+      }
       const answer = await response.text();
       if (!answer.trim()) throw new LiveSignalingError("signaling", "Codex live signaling returned an empty SDP answer");
       const callId = parseLiveCallId(response.headers.get("Location"));
@@ -177,6 +201,7 @@ export function createCodexLiveTransport(deps: CodexLiveTransportDeps): LiveCont
         settled = true;
         clearTimeout(timeout);
         sideband = socket;
+        console.log(`[live] sideband open for ${callId}`);
         resolve();
       });
       socket.addEventListener("message", (event) => {
@@ -186,6 +211,7 @@ export function createCodexLiveTransport(deps: CodexLiveTransportDeps): LiveCont
         }
         if (state === "closing" || state === "closed") return;
         const eventValue = parseLiveServerEvent(event.data);
+        if (eventValue?.type === "unknown") console.log(`[live] sideband event ${eventValue.wireType}`);
         if (eventValue) deps.onEvent(eventValue);
       });
       socket.addEventListener("error", (event) => {
@@ -204,6 +230,7 @@ export function createCodexLiveTransport(deps: CodexLiveTransportDeps): LiveCont
         }
         if (sideband !== socket) return;
         sideband = undefined;
+        console.log(`[live] sideband closed (${event.code}) ${event.reason}`);
         reportFailure(`Codex live sideband closed (${event.code})${event.reason ? `: ${event.reason}` : ""}`);
       });
     });

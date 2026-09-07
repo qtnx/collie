@@ -53,7 +53,7 @@ describe("live settings reader", () => {
 
     io.text = JSON.stringify({ voice: "ember" });
     const settings = await read();
-    expect(settings).toEqual({ voice: "ember", codexBin: "codex" });
+    expect(settings).toEqual({ voice: "ember", codexBin: "codex", auth: "codex" });
     expect(lines).toEqual([]);
     expect(io.reads).toBe(1);
   });
@@ -63,8 +63,8 @@ describe("live settings reader", () => {
     const { warn } = collectWarnings();
     const read = createLiveSettingsReader({ stateDir: "/state", io, warn });
 
-    io.text = JSON.stringify({ codexBin: "/usr/local/bin/codex" });
-    expect(await read()).toEqual({ voice: "sol", codexBin: "/usr/local/bin/codex" });
+    io.text = JSON.stringify({ codexBin: "/usr/local/bin/codex", auth: "codex" });
+    expect(await read()).toEqual({ voice: "sol", codexBin: "/usr/local/bin/codex", auth: "codex" });
   });
 
   test("rejects unknown voice and warns", async () => {
@@ -84,17 +84,17 @@ describe("live settings reader", () => {
     const read = createLiveSettingsReader({ stateDir: "/state", io, warn });
 
     io.text = JSON.stringify({ voice: "sol" });
-    expect(await read()).toEqual({ voice: "sol", codexBin: "codex" });
+    expect(await read()).toEqual({ voice: "sol", codexBin: "codex", auth: "codex" });
     expect(io.reads).toBe(1);
 
     // Same mtime: not re-read
-    expect(await read()).toEqual({ voice: "sol", codexBin: "codex" });
+    expect(await read()).toEqual({ voice: "sol", codexBin: "codex", auth: "codex" });
     expect(io.reads).toBe(1);
 
     // Bump mtime: re-reads
     io.mtime_ = 2;
     io.text = JSON.stringify({ voice: "maple" });
-    expect(await read()).toEqual({ voice: "maple", codexBin: "codex" });
+    expect(await read()).toEqual({ voice: "maple", codexBin: "codex", auth: "codex" });
     expect(io.reads).toBe(2);
   });
 
@@ -104,12 +104,12 @@ describe("live settings reader", () => {
     const read = createLiveSettingsReader({ stateDir: "/state", io, warn });
 
     io.text = JSON.stringify({ voice: "cove" });
-    expect(await read()).toEqual({ voice: "cove", codexBin: "codex" });
+    expect(await read()).toEqual({ voice: "cove", codexBin: "codex", auth: "codex" });
 
     // File corrupted
     io.mtime_ = 2;
     io.text = "invalid json {";
-    expect(await read()).toEqual({ voice: "cove", codexBin: "codex" });
+    expect(await read()).toEqual({ voice: "cove", codexBin: "codex", auth: "codex" });
     expect(lines.length).toBe(1);
     expect(lines[0]).toContain("could not be parsed");
   });
@@ -122,12 +122,14 @@ describe("live settings reader", () => {
     io.text = JSON.stringify({
       voice: "ember",
       codexBin: "codex",
+      auth: "codex",
       agent: { kind: "ompx", bin: "/usr/bin/ompx", model: "custom/model" },
     });
     const settings = await read();
     expect(settings).toEqual({
       voice: "ember",
       codexBin: "codex",
+      auth: "codex",
       agent: { kind: "ompx", bin: "/usr/bin/ompx", model: "custom/model" },
     });
     expect(lines).toEqual([]);

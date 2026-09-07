@@ -69,7 +69,7 @@ export function LiveCallSheet({
     };
   }, [open]);
 
-  const phase = phoneLivePhase(call.bridgePhase, call.muted, call.outputLevel);
+  const phase = phoneLivePhase(call.bridgePhase, call.muted, call.outputLevel, call.mediaUp);
   const over = call.status === "ended" || call.status === "error";
 
   return (

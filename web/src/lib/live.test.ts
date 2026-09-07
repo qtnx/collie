@@ -31,6 +31,8 @@ describe("phoneLivePhase", () => {
 
   it("says connecting until the bridge says the call is up", () => {
     expect(phoneLivePhase("connecting", false, 0)).toBe("connecting");
+    // The browser's own transport coming up is enough: the bridge may never hear session.started.
+    expect(phoneLivePhase("connecting", false, 0, true)).toBe("listening");
   });
 
   it("reads speaking off the output level, and listening off its absence", () => {

@@ -117,7 +117,7 @@ describe("createLiveService", () => {
 
   test("capability returns capability object when settings are present", async () => {
     const service = createLiveService({
-      settings: async () => ({ voice: "sol", codexBin: "codex" }),
+      settings: async () => ({ voice: "sol", codexBin: "codex", auth: "codex" }),
       broker: () => fakeBroker(true),
       resolvePane: async () => ({ code: "live.no_pane" }),
     });
@@ -135,6 +135,7 @@ describe("createLiveService", () => {
       settings: async () => ({
         voice: "sol",
         codexBin: "codex",
+        auth: "codex",
         agent: { kind: "ompx", bin: "/usr/bin/ompx", model: "openai-codex/gpt-5.6-luna" },
       }),
       broker: () => fakeBroker(true),
@@ -164,7 +165,7 @@ describe("createLiveService", () => {
 
   test("start returns 400 live.bad_body on invalid payload", async () => {
     const service = createLiveService({
-      settings: async () => ({ voice: "sol", codexBin: "codex" }),
+      settings: async () => ({ voice: "sol", codexBin: "codex", auth: "codex" }),
       broker: () => fakeBroker(),
       resolvePane: async () => ({ code: "live.no_pane" }),
     });
@@ -186,7 +187,7 @@ describe("createLiveService", () => {
 
   test("start returns 404 live.no_pane when pane does not exist", async () => {
     const service = createLiveService({
-      settings: async () => ({ voice: "sol", codexBin: "codex" }),
+      settings: async () => ({ voice: "sol", codexBin: "codex", auth: "codex" }),
       broker: () => fakeBroker(),
       resolvePane: async () => ({ code: "live.no_pane" }),
     });
@@ -201,7 +202,7 @@ describe("createLiveService", () => {
 
   test("start returns 409 live.peer_pane when pane belongs to a peer", async () => {
     const service = createLiveService({
-      settings: async () => ({ voice: "sol", codexBin: "codex" }),
+      settings: async () => ({ voice: "sol", codexBin: "codex", auth: "codex" }),
       broker: () => fakeBroker(),
       resolvePane: async () => ({ code: "live.peer_pane" }),
     });
@@ -219,7 +220,7 @@ describe("createLiveService", () => {
     let activeSessionInstance: FakeLiveSession | null = null;
 
     const deps: LiveDeps = {
-      settings: async () => ({ voice: "sol", codexBin: "codex" }),
+      settings: async () => ({ voice: "sol", codexBin: "codex", auth: "codex" }),
       broker: () => fakeBroker(),
       resolvePane: async () => ({
         port: fakePort(),
@@ -319,7 +320,7 @@ describe("createLiveService", () => {
     let fakeNow = 1000;
 
     const deps: LiveDeps = {
-      settings: async () => ({ voice: "sol", codexBin: "codex" }),
+      settings: async () => ({ voice: "sol", codexBin: "codex", auth: "codex" }),
       broker: () => fakeBroker(),
       resolvePane: async () => ({
         port: fakePort(),
@@ -359,7 +360,7 @@ describe("createLiveService", () => {
 
   test("handles LiveSignalingError auth and signaling properly", async () => {
     const depsAuth: LiveDeps = {
-      settings: async () => ({ voice: "sol", codexBin: "codex" }),
+      settings: async () => ({ voice: "sol", codexBin: "codex", auth: "codex" }),
       broker: () => fakeBroker(),
       resolvePane: async () => ({
         port: fakePort(),
@@ -398,6 +399,7 @@ describe("createLiveService", () => {
       settings: async () => ({
         voice: "sol",
         codexBin: "codex",
+        auth: "codex",
         agent: { kind: "ompx", bin: "/fake/ompx", model: "openai-codex/gpt-5.6-luna" },
       }),
       broker: () => fakeBroker(),
@@ -440,6 +442,7 @@ describe("createLiveService", () => {
         settings: async () => ({
           voice: "sol",
           codexBin: "codex",
+          auth: "codex",
           agent: { kind: "ompx", bin: "/fake/ompx", model: "openai-codex/gpt-5.6-luna" },
         }),
         broker: () => fakeBroker(),

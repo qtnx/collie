@@ -61,7 +61,10 @@ export interface LiveSessionLike {
 
 export interface LiveDeps {
   settings: () => Promise<LiveSettings | null>;
+  /** The Codex-CLI broker (`codex app-server`), keyed by the codex binary. */
   broker: (codexBin: string) => CodexAuthBroker;
+  /** The omp broker (`ompx token openai-codex`), keyed by the ompx binary. Absent → `auth: ompx` refuses. */
+  ompBroker?: (ompxBin: string) => CodexAuthBroker;
   resolvePane: LivePaneResolver;
   now?: () => number;
   createSession?: (opts: LiveSessionOptions) => LiveSessionLike;
@@ -119,18 +122,22 @@ export function createLiveService(deps: LiveDeps): LiveService {
   let operatorWarned = false;
 
   let cachedBroker: CodexAuthBroker | null = null;
-  let cachedCodexBin: string | null = null;
+  let cachedBrokerKey: string | null = null;
   let primed = false;
   let activeSession: LiveSessionLike | null = null;
   const sessions = new Map<string, StoredSession>();
 
-  function getBroker(codexBin: string): CodexAuthBroker {
-    if (cachedBroker && cachedCodexBin === codexBin) {
+  /** One broker per distinct (source, binary); the outgoing one is closed as the new one is built. */
+  function getBroker(settings: LiveSettings): CodexAuthBroker {
+    const useOmp = settings.auth === "ompx" && settings.agent !== undefined;
+    const bin = useOmp && settings.agent !== undefined ? settings.agent.bin : settings.codexBin;
+    const key = `${useOmp ? "ompx" : "codex"}:${bin}`;
+    if (cachedBroker && cachedBrokerKey === key) {
       return cachedBroker;
     }
     cachedBroker?.close();
-    cachedBroker = deps.broker(codexBin);
-    cachedCodexBin = codexBin;
+    cachedBroker = useOmp && deps.ompBroker ? deps.ompBroker(bin) : deps.broker(bin);
+    cachedBrokerKey = key;
     primed = false;
     return cachedBroker;
   }
@@ -166,7 +173,7 @@ export function createLiveService(deps: LiveDeps): LiveService {
     async capability(): Promise<LiveCapability | null> {
       const currentSettings = await deps.settings();
       if (!currentSettings) return null;
-      const broker = getBroker(currentSettings.codexBin);
+      const broker = getBroker(currentSettings);
       if (!primed) {
         primed = true;
         // Ask for a TOKEN, not merely the auth method: Codex reports `chatgpt` for a login whose
@@ -215,15 +222,17 @@ export function createLiveService(deps: LiveDeps): LiveService {
       }
 
       const paneId = jsonStringField(rec.paneId)?.trim();
-      const sdp = jsonStringField(rec.sdp)?.trim();
+      // NEVER trimmed: an SDP ends in CRLF by grammar, and the endpoint refuses one that does not
+      // (`invalid_offer`). Emptiness is judged on a trimmed copy below; the bytes go through as sent.
+      const sdp = jsonStringField(rec.sdp);
       const languageVal = rec.language;
       const language = jsonStringField(languageVal)?.trim();
 
       if (
         paneId === undefined ||
         paneId === "" ||
-        sdp === undefined ||
-        sdp === "" ||
+        sdp === undefined || sdp === null ||
+        sdp.trim() === "" ||
         (languageVal !== undefined && (language === undefined || language.length > 16))
       ) {
         return {
@@ -270,7 +279,7 @@ export function createLiveService(deps: LiveDeps): LiveService {
       }
 
       const id = randomUUID();
-      const broker = getBroker(currentSettings.codexBin);
+      const broker = getBroker(currentSettings);
       const user = localUser();
       const instructions = renderLiveInstructions({
         ...user,
@@ -460,7 +469,7 @@ export function createLiveService(deps: LiveDeps): LiveService {
       sessions.clear();
       cachedBroker?.close();
       cachedBroker = null;
-      cachedCodexBin = null;
+      cachedBrokerKey = null;
     },
 
     setResolvePane(resolver: LivePaneResolver): void {

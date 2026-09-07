@@ -26,12 +26,21 @@ export const DEFAULT_OPERATOR_MODEL = "openai-codex/gpt-5.6-luna";
 
 
 
+/**
+ * Whose sign-in signs the call. `codex` borrows the Codex CLI's (`codex app-server`); `ompx`
+ * borrows omp's (`ompx token openai-codex`). Written by `collie live on`; absent means `codex`.
+ */
+export type LiveAuthSource = "codex" | "ompx";
+export const LIVE_AUTH_SOURCES: readonly LiveAuthSource[] = ["codex", "ompx"];
+
 /** Resolved settings for realtime live calls. */
 export interface LiveSettings {
   /** Text-to-speech voice name validated against `LIVE_VOICES`. */
   voice: string;
   /** Path or binary name for `codex` command. */
   codexBin: string;
+  /** Which sign-in signs the call; `ompx` needs `agent.bin` (that is the binary asked). */
+  auth: LiveAuthSource;
   /** Present when live calls delegate through an operator agent. */
   agent?: OperatorAgentSettings;
 }
@@ -103,10 +112,19 @@ export function createLiveSettingsReader(opts: {
                   }
                 }
               }
+              const authRaw = jsonStringField(o.auth)?.trim();
+              const auth: LiveAuthSource = authRaw === "ompx" ? "ompx" : "codex";
+              if (authRaw !== undefined && authRaw !== "" && !LIVE_AUTH_SOURCES.some((known) => known === authRaw)) {
+                opts.warn(`${path}: unknown auth "${authRaw}" (expected ${LIVE_AUTH_SOURCES.join(", ")})`);
+                agentValid = false;
+              } else if (auth === "ompx" && agent === undefined) {
+                opts.warn(`${path}: auth "ompx" needs an agent block naming the ompx binary`);
+                agentValid = false;
+              }
               if (!agentValid) {
                 lastGood = null;
               } else {
-                const settings: LiveSettings = { voice, codexBin };
+                const settings: LiveSettings = { voice, codexBin, auth };
                 if (agent !== undefined) {
                   settings.agent = agent;
                 }
