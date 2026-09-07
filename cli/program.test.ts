@@ -78,7 +78,7 @@ const PUSH_VERBS = ["push"];
 // operator's own terminal is the only right place to configure, because they mint or accept a
 // credential.
 const STT_VERBS = ["stt"];
-const LIVE_VERBS = ["live"];
+const LIVE_VERBS = ["live", "live-mcp"];
 
 function capture(): Io & { stdout: string[]; stderr: string[] } {
   const stdout: string[] = [];
@@ -108,6 +108,8 @@ describe("the verb table", () => {
       "_exec-bridge",
       // The emitter is spelled by a hook, never typed — see cli/beacon.ts.
       "beacon",
+      // Stdio pump to the live operator agent's MCP unix socket.
+      "live-mcp",
     ]);
   });
 

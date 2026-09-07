@@ -113,4 +113,67 @@ describe("live settings reader", () => {
     expect(lines.length).toBe(1);
     expect(lines[0]).toContain("could not be parsed");
   });
+
+  test("parses valid agent settings", async () => {
+    const io = fakeIo();
+    const { warn, lines } = collectWarnings();
+    const read = createLiveSettingsReader({ stateDir: "/state", io, warn });
+
+    io.text = JSON.stringify({
+      voice: "ember",
+      codexBin: "codex",
+      agent: { kind: "ompx", bin: "/usr/bin/ompx", model: "custom/model" },
+    });
+    const settings = await read();
+    expect(settings).toEqual({
+      voice: "ember",
+      codexBin: "codex",
+      agent: { kind: "ompx", bin: "/usr/bin/ompx", model: "custom/model" },
+    });
+    expect(lines).toEqual([]);
+  });
+
+  test("defaults agent model when not specified", async () => {
+    const io = fakeIo();
+    const { warn, lines } = collectWarnings();
+    const read = createLiveSettingsReader({ stateDir: "/state", io, warn });
+
+    io.text = JSON.stringify({
+      voice: "ember",
+      agent: { kind: "ompx", bin: "/usr/bin/ompx" },
+    });
+    const settings = await read();
+    expect(settings?.agent).toEqual({
+      kind: "ompx",
+      bin: "/usr/bin/ompx",
+      model: "openai-codex/gpt-5.6-luna",
+    });
+    expect(lines).toEqual([]);
+  });
+
+  test("rejects invalid agent kind and warns", async () => {
+    const io = fakeIo();
+    const { warn, lines } = collectWarnings();
+    const read = createLiveSettingsReader({ stateDir: "/state", io, warn });
+
+    io.text = JSON.stringify({
+      agent: { kind: "other", bin: "/usr/bin/ompx" },
+    });
+    expect(await read()).toBeNull();
+    expect(lines.length).toBe(1);
+    expect(lines[0]).toContain("unknown agent kind");
+  });
+
+  test("rejects empty agent bin and warns", async () => {
+    const io = fakeIo();
+    const { warn, lines } = collectWarnings();
+    const read = createLiveSettingsReader({ stateDir: "/state", io, warn });
+
+    io.text = JSON.stringify({
+      agent: { kind: "ompx", bin: "   " },
+    });
+    expect(await read()).toBeNull();
+    expect(lines.length).toBe(1);
+    expect(lines[0]).toContain("agent bin must be non-empty");
+  });
 });

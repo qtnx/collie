@@ -14,6 +14,16 @@ export interface PaneAgentPort {
   screen(): Promise<string | null>;
 }
 
+/** Extended pane controls used by the live operator's MCP server. */
+export interface OperatorPanePort extends PaneAgentPort {
+  readonly meta: { paneId: string; agent: string; cwd: string; label?: string };
+  sendKeys(keys: readonly string[]): Promise<{ ok: true } | { ok: false; reason: string }>;
+  /** This collie's panes, read-only. */
+  listPanes(): Array<{ paneId: string; agent: string; status: AgentStatus; cwd: string; label?: string }>;
+  /** Resolve when the pane is not working and its screen settled, or at the deadline. */
+  waitIdle(timeoutMs: number): Promise<{ status: AgentStatus | undefined; settled: boolean }>;
+}
+
 /** Agent side of a live call: runs delegated requests and streams their outcome back as context. */
 export interface LiveAgentEndpoint {
   startDelegation(id: string, request: string): void;

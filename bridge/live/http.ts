@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-
+import { mkdir, rm } from "node:fs/promises";
+import { join } from "node:path";
 import type { JsonValue } from "../json.ts";
 import { jsonRecord, jsonStringField } from "../stt/json.ts";
 import type { CodexAuthBroker } from "../stt/codex-auth.ts";
@@ -12,9 +13,12 @@ import type {
 } from "../types.ts";
 import {
   type LiveAgentEndpoint,
+  type OperatorPanePort,
   type PaneAgentPort,
   createPaneAgentEndpoint,
 } from "./agent-pane.ts";
+import { createLiveMcpServer, type LiveMcpServer } from "./mcp-server.ts";
+import { createOperatorAgentEndpoint } from "./operator-agent.ts";
 import type { LiveSettings } from "./config.ts";
 import { localUser, renderLiveInstructions } from "./instructions.ts";
 import {
@@ -41,7 +45,7 @@ import {
 //  - Clean session teardown and token broker lifecycle
 
 export type LivePaneResolver = (paneId: string) => Promise<
-  | { port: PaneAgentPort; agent: string; cwd: string; session: string }
+  | { port: OperatorPanePort; agent: string; cwd: string; session: string }
   | { code: "live.no_pane" | "live.peer_pane" }
 >;
 export interface LiveSessionLike {
@@ -63,6 +67,10 @@ export interface LiveDeps {
   createSession?: (opts: LiveSessionOptions) => LiveSessionLike;
   createTransport?: (deps: CodexLiveTransportDeps) => LiveControlTransport;
   createAgent?: (port: PaneAgentPort) => LiveAgentEndpoint;
+  operator?: {
+    pumpCommand: readonly string[];
+    stateDir: string;
+  };
 }
 
 export interface LiveStartOutcome {
@@ -98,6 +106,7 @@ interface StoredSession {
   session: LiveSessionLike;
   paneId: string;
   sessionName: string;
+  cleanup?: () => Promise<void>;
 }
 
 const PHONE_GONE_TIMEOUT_MS = 20_000;
@@ -107,11 +116,11 @@ const REAP_INTERVAL_MS = 5_000;
 export function createLiveService(deps: LiveDeps): LiveService {
   const clock = deps.now ?? Date.now;
   let paneResolver = deps.resolvePane;
+  let operatorWarned = false;
 
   let cachedBroker: CodexAuthBroker | null = null;
   let cachedCodexBin: string | null = null;
   let primed = false;
-
   let activeSession: LiveSessionLike | null = null;
   const sessions = new Map<string, StoredSession>();
 
@@ -139,6 +148,7 @@ export function createLiveService(deps: LiveDeps): LiveService {
     for (const [id, item] of sessions) {
       const endedAt = item.session.endedAt;
       if (endedAt !== undefined && now - endedAt >= ENDED_RETENTION_MS) {
+        void item.cleanup?.();
         sessions.delete(id);
         if (activeSession === item.session) {
           activeSession = null;
@@ -169,6 +179,9 @@ export function createLiveService(deps: LiveDeps): LiveService {
         available: known.available,
         voice: currentSettings.voice,
       };
+      if (currentSettings.agent !== undefined) {
+        cap.agent = { model: currentSettings.agent.model };
+      }
       // The broker's words name `collie stt test`, the verb that owns IT; on this surface the
       // operator's next move is `collie live status`, so the sentence is rewritten to say so.
       if (known.reason !== undefined) cap.reason = known.reason.replace("`collie stt test`", "`collie live status`");
@@ -275,8 +288,56 @@ export function createLiveService(deps: LiveDeps): LiveService {
         onEvent: (event) => session?.handleEvent?.(event),
       });
 
-      const agentFactory = deps.createAgent ?? createPaneAgentEndpoint;
-      const agent = agentFactory(resolved.port);
+      let agent: LiveAgentEndpoint;
+      let mcpServer: LiveMcpServer | undefined;
+      let sessionWorkDir: string | undefined;
+
+      if (currentSettings.agent !== undefined) {
+        if (!deps.operator) {
+          if (!operatorWarned) {
+            operatorWarned = true;
+            console.warn(
+              "[live] operator agent configured but operator dependencies missing; falling back to direct pane path",
+            );
+          }
+          const agentFactory = deps.createAgent ?? createPaneAgentEndpoint;
+          agent = agentFactory(resolved.port);
+        } else {
+          const liveDir = join(deps.operator.stateDir, "live");
+          sessionWorkDir = join(liveDir, id);
+          await mkdir(sessionWorkDir, { recursive: true, mode: 0o700 });
+          const socketPath = join(sessionWorkDir, "mcp.sock");
+          mcpServer = createLiveMcpServer({ socketPath, port: resolved.port });
+          agent = createOperatorAgentEndpoint({
+            settings: currentSettings.agent,
+            port: resolved.port,
+            workDir: sessionWorkDir,
+            pumpCommand: deps.operator.pumpCommand,
+            mcp: mcpServer,
+            language: language && language !== "" ? language : "en",
+            now: clock,
+          });
+        }
+      } else {
+        const agentFactory = deps.createAgent ?? createPaneAgentEndpoint;
+        agent = agentFactory(resolved.port);
+      }
+
+      const cleanup = async (): Promise<void> => {
+        try {
+          mcpServer?.close();
+        } catch {
+          // ignore
+        }
+        if (sessionWorkDir) {
+          try {
+            await rm(sessionWorkDir, { recursive: true, force: true });
+          } catch {
+            // ignore
+          }
+        }
+      };
+
       const sessionFactory =
         deps.createSession ?? ((opts: LiveSessionOptions) => new LiveSession(opts));
       const liveSession = sessionFactory({
@@ -286,7 +347,6 @@ export function createLiveService(deps: LiveDeps): LiveService {
         now: clock,
       });
       session = liveSession;
-
       try {
         const answerSdp = await liveSession.start(sdp);
         activeSession = liveSession;
@@ -294,8 +354,8 @@ export function createLiveService(deps: LiveDeps): LiveService {
           session: liveSession,
           paneId,
           sessionName: resolved.session,
+          cleanup,
         });
-
         return {
           status: 200,
           body: { ok: true, id, sdp: answerSdp },
@@ -303,8 +363,8 @@ export function createLiveService(deps: LiveDeps): LiveService {
           paneId,
         } satisfies LiveStartOutcome;
       } catch (err) {
+        await cleanup();
         await session.stop(String(err)).catch(() => {});
-        // The journal gets the cause; the phone gets Collie's own sentence below. A broker or
         // endpoint message can name the account and must not reach a browser.
         console.warn(`[live] start failed: ${err instanceof Error ? err.message : String(err)}`);
         if (err instanceof LiveSignalingError) {
@@ -379,7 +439,7 @@ export function createLiveService(deps: LiveDeps): LiveService {
       if (activeSession === stored.session) {
         activeSession = null;
       }
-
+      await stored.cleanup?.();
       return {
         status: 200,
         body: { ok: true },
@@ -393,6 +453,9 @@ export function createLiveService(deps: LiveDeps): LiveService {
       if (activeSession) {
         void activeSession.stop("service closed").catch(() => {});
         activeSession = null;
+      }
+      for (const item of sessions.values()) {
+        void item.cleanup?.();
       }
       sessions.clear();
       cachedBroker?.close();

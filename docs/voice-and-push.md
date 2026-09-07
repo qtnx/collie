@@ -178,11 +178,19 @@ To start using live calls:
 3. Open a pane in Collie on your phone to find the **Live** button next to the composer.
 4. Tap the button to open the call sheet and speak directly with the agent.
 
+### Operator agent (`--agent ompx`)
+
+By default, live call delegations type directly into the pane and wait for its journal. Passing `--agent ompx` routes voice delegation through an **operator agent** (`ompx --mode=rpc`) per session. The operator agent has access only to six pane tools over MCP (`read_screen`, `type_text`, `send_keys`, `wait_until_idle`, `read_history`, `list_panes`) without shell or filesystem tools. It inspects the screen, interacts with the pane's agent or prompts, and speaks back concise summaries:
+
+```bash
+bin/collie live on --agent ompx                       # default model: openai-codex/gpt-5.6-luna
+bin/collie live on --agent ompx --model custom/model  # custom model
+```
+
 > **Security.** The live call connects via a private ChatGPT endpoint wearing Codex Desktop's identity
 > with the operator's own ChatGPT account login; rate-limit and ban exposure is yours, and the private
 > endpoint may change or break without notice. Microphone audio travels directly from the phone browser
 > to OpenAI via WebRTC, never passing through the Collie bridge host.
-
 ## Web Push (optional)
 
 Disabled by default. Setup requires three steps. The sender library (`web-push`) is included as an

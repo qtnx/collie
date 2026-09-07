@@ -4,7 +4,7 @@ import type { CodexAccessToken, CodexAuthBroker } from "../stt/codex-auth.ts";
 import type { SttStatus } from "../stt/provider.ts";
 import type { LiveCapability, LiveErrorCode } from "../types.ts";
 import type { LiveServerEvent } from "./protocol.ts";
-import type { LiveAgentEndpoint, PaneAgentPort } from "./agent-pane.ts";
+import type { LiveAgentEndpoint, OperatorPanePort } from "./agent-pane.ts";
 import { type LiveDeps, type LiveSessionLike, createLiveService } from "./http.ts";
 import type { LiveSessionOptions, LiveSessionView } from "./session.ts";
 import { LiveSignalingError, type LiveControlTransport } from "./signaling.ts";
@@ -23,12 +23,16 @@ function fakeBroker(available = true, reason?: string): CodexAuthBroker {
   };
 }
 
-function fakePort(): PaneAgentPort {
+function fakePort(): OperatorPanePort {
   return {
     reply: async () => ({ ok: true }),
     status: () => "idle",
     history: async () => [],
     screen: async () => "screen text",
+    meta: { paneId: "p1", agent: "codex", cwd: "/home/work" },
+    sendKeys: async () => ({ ok: true }),
+    listPanes: () => [],
+    waitIdle: async () => ({ status: "idle", settled: true }),
   };
 }
 class FakeLiveSession implements LiveSessionLike {
@@ -123,6 +127,22 @@ describe("createLiveService", () => {
       available: true,
       voice: "sol",
     } satisfies LiveCapability);
+    service.close();
+  });
+
+  test("capability includes agent when settings.agent is present", async () => {
+    const service = createLiveService({
+      settings: async () => ({
+        voice: "sol",
+        codexBin: "codex",
+        agent: { kind: "ompx", bin: "/usr/bin/ompx", model: "openai-codex/gpt-5.6-luna" },
+      }),
+      broker: () => fakeBroker(true),
+      resolvePane: async () => ({ code: "live.no_pane" }),
+    });
+
+    const cap = await service.capability();
+    expect(cap?.agent).toEqual({ model: "openai-codex/gpt-5.6-luna" });
     service.close();
   });
 
@@ -370,5 +390,89 @@ describe("createLiveService", () => {
       expect(resAuth.body.code).toBe("live.auth");
     }
     serviceAuth.close();
+  });
+
+  test("start with settings.agent and operator deps spawns operator agent and cleans up", async () => {
+    const tmpDir = `/tmp/collie-test-operator-${Date.now()}`;
+    const service = createLiveService({
+      settings: async () => ({
+        voice: "sol",
+        codexBin: "codex",
+        agent: { kind: "ompx", bin: "/fake/ompx", model: "openai-codex/gpt-5.6-luna" },
+      }),
+      broker: () => fakeBroker(),
+      resolvePane: async () => ({
+        port: fakePort(),
+        agent: "codex",
+        cwd: "/home/work",
+        session: "s1",
+      }),
+      operator: {
+        pumpCommand: ["collie", "live-mcp"],
+        stateDir: tmpDir,
+      },
+      createTransport: () => ({
+        connect: async () => "answer-sdp",
+        send: async () => {},
+        close: async () => {},
+      }),
+      createSession: (opts) => new FakeLiveSession(opts),
+    });
+
+    const startRes = await service.start({ paneId: "p1", sdp: "offer" });
+    expect(startRes.status).toBe(200);
+    if (startRes.body.ok) {
+      const id = startRes.body.id;
+      const stopRes = await service.stop(id, "done");
+      expect(stopRes.status).toBe(200);
+    }
+    service.close();
+  });
+
+  test("start with settings.agent but missing operator deps warns and falls back to direct path", async () => {
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (msg: string) => warnings.push(msg);
+    let directAgentCreated = false;
+
+    try {
+      const service = createLiveService({
+        settings: async () => ({
+          voice: "sol",
+          codexBin: "codex",
+          agent: { kind: "ompx", bin: "/fake/ompx", model: "openai-codex/gpt-5.6-luna" },
+        }),
+        broker: () => fakeBroker(),
+        resolvePane: async () => ({
+          port: fakePort(),
+          agent: "codex",
+          cwd: "/home/work",
+          session: "s1",
+        }),
+        createAgent: (_port) => {
+          directAgentCreated = true;
+          return {
+            startDelegation: () => {},
+            onContext: () => {},
+            onDelegationEnd: () => {},
+            close: async () => {},
+          };
+        },
+        createTransport: () => ({
+          connect: async () => "answer-sdp",
+          send: async () => {},
+          close: async () => {},
+        }),
+        createSession: (opts) => new FakeLiveSession(opts),
+      });
+
+      const res = await service.start({ paneId: "p1", sdp: "offer" });
+      expect(res.status).toBe(200);
+      expect(directAgentCreated).toBe(true);
+      expect(warnings.some((w) => w.includes("operator agent configured but operator dependencies missing"))).toBe(true);
+      service.close();
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 });

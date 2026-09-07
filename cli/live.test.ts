@@ -103,6 +103,73 @@ describe("collie live on", () => {
     expect(d.files.entries.has(LIVE_CONFIG_PATH)).toBe(false);
     expect(d.io.stderr.join("\n")).toContain("live call not enabled");
   });
+
+  test("enables live with --agent ompx and default model", async () => {
+    const d = testDeps();
+    const code = await cmdLiveOn(d, ["--agent", "ompx", "--yes"]);
+
+    expect(code).toBe(EXIT.OK);
+    const entry = d.files.entries.get(LIVE_CONFIG_PATH);
+    expect(entry).toBeDefined();
+    // SAFETY: cmdLiveOn writes this structure.
+    const parsed = JSON.parse(entry!.text) as {
+      voice: string;
+      codexBin: string;
+      agent?: { kind: string; bin: string; model: string };
+    };
+    expect(parsed.agent).toEqual({
+      kind: "ompx",
+      bin: "/fake/ompx",
+      model: "openai-codex/gpt-5.6-luna",
+    });
+    expect(d.io.stdout.join("\n")).toContain("agent: ompx [openai-codex/gpt-5.6-luna]");
+  });
+
+  test("enables live with --agent ompx and custom --model", async () => {
+    const d = testDeps();
+    const code = await cmdLiveOn(d, ["--agent", "ompx", "--model", "custom/model", "--yes"]);
+
+    expect(code).toBe(EXIT.OK);
+    const entry = d.files.entries.get(LIVE_CONFIG_PATH);
+    // SAFETY: cmdLiveOn writes this structure.
+    const parsed = JSON.parse(entry!.text) as {
+      voice: string;
+      codexBin: string;
+      agent?: { kind: string; bin: string; model: string };
+    };
+    expect(parsed.agent).toEqual({
+      kind: "ompx",
+      bin: "/fake/ompx",
+      model: "custom/model",
+    });
+  });
+
+  test("fails when ompx binary is missing on PATH", async () => {
+    const d = testDeps({ absent: ["ompx"] });
+    const code = await cmdLiveOn(d, ["--agent", "ompx", "--yes"]);
+
+    expect(code).toBe(EXIT.FAIL);
+    expect(d.files.entries.has(LIVE_CONFIG_PATH)).toBe(false);
+    expect(d.io.stderr.join("\n")).toContain("no `ompx` binary was found on PATH");
+  });
+
+  test("rejects unknown agent kind", async () => {
+    const d = testDeps();
+    const code = await cmdLiveOn(d, ["--agent", "other", "--yes"]);
+
+    expect(code).toBe(EXIT.USAGE);
+    expect(d.files.entries.has(LIVE_CONFIG_PATH)).toBe(false);
+    expect(d.io.stderr.join("\n")).toContain("unknown agent \"other\"");
+  });
+
+  test("rejects --model without --agent", async () => {
+    const d = testDeps();
+    const code = await cmdLiveOn(d, ["--model", "custom/model", "--yes"]);
+
+    expect(code).toBe(EXIT.USAGE);
+    expect(d.files.entries.has(LIVE_CONFIG_PATH)).toBe(false);
+    expect(d.io.stderr.join("\n")).toContain("--model requires --agent ompx");
+  });
 });
 
 describe("collie live off", () => {
@@ -144,6 +211,22 @@ describe("collie live status", () => {
     expect(out).toContain("live call: on");
     expect(out).toContain("voice:     juniper");
     expect(out).toContain("codex-bin: codex");
+  });
+
+  test("reports agent details when agent present in live.json", () => {
+    const d = testDeps({
+      seed: {
+        [LIVE_CONFIG_PATH]: JSON.stringify({
+          voice: "juniper",
+          codexBin: "codex",
+          agent: { kind: "ompx", bin: "ompx", model: "custom/model" },
+        }),
+      },
+    });
+    const code = cmdLiveStatus(d);
+    expect(code).toBe(EXIT.OK);
+    const out = d.io.stdout.join("\n");
+    expect(out).toContain("agent:     ompx [custom/model] (ompx)");
   });
 });
 

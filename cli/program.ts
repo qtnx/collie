@@ -82,6 +82,7 @@ import {
   LIVE_SUBCOMMANDS,
   type LiveDeps,
 } from "./live.ts";
+import { cmdLiveMcp } from "./live-mcp.ts";
 import { realExec, realFiles } from "./sys.ts";
 import { cmdApplyUpdate, cmdUpdate } from "./update.ts";
 import { cmdUpdateCheck, updateCheckDeps, wantsCheck } from "./update-check.ts";
@@ -556,6 +557,12 @@ export const COMMANDS: readonly Command[] = [
       },
     ],
     run: (args, s) => cmdLive(liveDeps(s.io), args),
+  },
+  {
+    name: "live-mcp",
+    summary: "internal: stdio pump to the live operator agent's MCP unix socket",
+    internal: true,
+    run: (_args, _s) => cmdLiveMcp(),
   },
   // ── The pack (M4/07) ───────────────────────────────────────────────────────
   // The only way a machine enters or leaves a pack. Every one of them resolves its seams through

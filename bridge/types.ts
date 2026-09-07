@@ -898,6 +898,8 @@ export interface LiveCapability {
   reason?: string;
   /** Configured TTS voice name (e.g. "sol"). */
   voice: string;
+  /** Present when the call delegates through an operator agent. */
+  agent?: { model: string };
 }
 
 /** Phase of an active live call session. */

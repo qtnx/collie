@@ -793,6 +793,9 @@ const STATE_DIR_ENTRIES = [
   // READS it, and the emitter that fills it is a CLI verb the operator installs a hook for. An
   // instance whose operator never ran `collie hooks install` never has this directory at all.
   "beacons",
+  // Realtime live call operator agent work dirs (<stateDir>/live/<id>).
+  // Created per live call with operator agent, cleaned up on session stop and service close.
+  "live",
   // Realtime live call settings. Absent until the operator runs `collie live on`, and READ ONLY
   // by the bridge — `bridge/live/config.ts` names this path and never writes it.
   "live.json",

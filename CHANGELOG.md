@@ -8,6 +8,7 @@ there is one.
 ## [Unreleased]
 
 - Realtime Live voice calls to an agent in a pane via WebRTC and Codex Desktop's identity (`collie live on`).
+- Live call operator agent via `ompx` and MCP pane tools (`collie live on --agent ompx`).
 
 ## [1.5.5] - 2026-09-07
 

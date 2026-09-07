@@ -57,3 +57,7 @@ and the signaling layer borrows Codex Desktop's identity with explicit operator 
   interact with them from the lead or via normal typed/dictated replies.
 - **Zero media egress from host:** The host runs only lightweight JSON/WebSocket control signaling, leaving
   CPU and network capacity free for development tools and agent execution.
+
+### Addendum: Operator Agent (`--agent ompx`)
+
+As an alternative to direct pane delegation (`sendReplySteps` + journal watching), `collie live on --agent ompx` introduces an **operator agent** as a third child class between the voice call and the terminal pane. Running via `ompx --mode=rpc` (one long-lived subprocess per live session), the operator agent's tools are strictly limited to the pane itself over MCP (`read_screen`, `type_text`, `send_keys`, `wait_until_idle`, `read_history`, `list_panes`) with no shell, filesystem, or network tools. The operator agent reads terminal context, answers intermediate prompts or menu selections in the pane, and returns spoken-prose summaries for the voice model to read out.

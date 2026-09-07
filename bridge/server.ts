@@ -38,7 +38,8 @@ import { TranscriptStore } from "./journal/store.ts";
 import type { JournalAdapter } from "./journal/types.ts";
 import { stripAnsi } from "./journal/text.ts";
 import type { LivePaneResolver, LiveService } from "./live/http.ts";
-import type { PaneAgentPort } from "./live/agent-pane.ts";
+import type { OperatorPanePort } from "./live/agent-pane.ts";
+import { isMuxKey } from "./mux/keys.ts";
 import {
   bearerToken,
   normalizeLabel,
@@ -675,7 +676,11 @@ export function startServer(opts: {
         (p) => p.paneId === paneId,
       );
       if (pane) {
-        const port: PaneAgentPort = {
+        const meta: OperatorPanePort["meta"] =
+          pane.paneLabel !== undefined
+            ? { paneId, agent: pane.agent, cwd: pane.cwd, label: pane.paneLabel }
+            : { paneId, agent: pane.agent, cwd: pane.cwd };
+        const port: OperatorPanePort = {
           reply: async (request: string) => {
             const outcome = await sendReplySteps(rt.herdr, paneId, request, true, cfg.submitKeys);
             if (outcome.ok) return { ok: true };
@@ -718,6 +723,59 @@ export function startServer(opts: {
             } catch {
               return null;
             }
+          },
+          meta,
+          sendKeys: async (keys: readonly string[]) => {
+            for (const key of keys) {
+              if (!isMuxKey(key)) {
+                return { ok: false, reason: `invalid key "${key}"` };
+              }
+            }
+            const res = await rt.herdr.sendKeys(paneId, keys);
+            if (res.ok) return { ok: true };
+            return { ok: false, reason: res.reason };
+          },
+          listPanes: () => {
+            const cur = rt.engine.current();
+            return [...cur.agents, ...cur.shellPanes].map((p) =>
+              p.paneLabel !== undefined
+                ? {
+                    paneId: p.paneId,
+                    agent: p.agent,
+                    status: p.status,
+                    cwd: p.cwd,
+                    label: p.paneLabel,
+                  }
+                : {
+                    paneId: p.paneId,
+                    agent: p.agent,
+                    status: p.status,
+                    cwd: p.cwd,
+                  },
+            );
+          },
+          waitIdle: async (timeoutMs: number) => {
+            const started = Date.now();
+            const deadline = started + Math.max(0, timeoutMs);
+            while (Date.now() < deadline) {
+              const currentStatus = port.status();
+              if (currentStatus !== "working") {
+                const remaining = deadline - Date.now();
+                if (remaining <= 0) {
+                  return { status: currentStatus, settled: false };
+                }
+                const ready = await awaitPaneReady(rt.herdr, paneId, {
+                  ceilingMs: remaining,
+                  pollMs: 250,
+                  floorMs: 250,
+                });
+                return { status: port.status(), settled: ready.ready };
+              }
+              const sleepMs = Math.min(1_000, Math.max(0, deadline - Date.now()));
+              if (sleepMs <= 0) break;
+              await Bun.sleep(sleepMs);
+            }
+            return { status: port.status(), settled: false };
           },
         };
         return {

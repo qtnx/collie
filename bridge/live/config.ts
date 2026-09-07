@@ -4,7 +4,9 @@ import type { JsonValue } from "../json.ts";
 import { diskIo, type OperatorFileIo } from "../operator-file.ts";
 import { jsonRecord, jsonStringField } from "../stt/json.ts";
 import { DEFAULT_LIVE_VOICE, LIVE_VOICES } from "./protocol.ts";
+import type { OperatorAgentSettings } from "./operator-agent.ts";
 
+export type { OperatorAgentSettings };
 // ── WHERE THE REALTIME LIVE CALL SETTINGS COME FROM ──────────────────────────
 //
 // Stored in `<stateDir>/live.json` as a small JSON document (`{"voice": "sol", "codexBin": "codex"}`).
@@ -19,12 +21,19 @@ import { DEFAULT_LIVE_VOICE, LIVE_VOICES } from "./protocol.ts";
 /** The file under the state directory holding live call settings. */
 export const LIVE_FILENAME = "live.json";
 
+/** Default model for the live operator agent. */
+export const DEFAULT_OPERATOR_MODEL = "openai-codex/gpt-5.6-luna";
+
+
+
 /** Resolved settings for realtime live calls. */
 export interface LiveSettings {
   /** Text-to-speech voice name validated against `LIVE_VOICES`. */
   voice: string;
   /** Path or binary name for `codex` command. */
   codexBin: string;
+  /** Present when live calls delegate through an operator agent. */
+  agent?: OperatorAgentSettings;
 }
 
 /** The path `live.json` sits at given the bridge's state dir. */
@@ -71,7 +80,38 @@ export function createLiveSettingsReader(opts: {
               lastGood = null;
             } else {
               const codexBin = jsonStringField(o.codexBin)?.trim() || "codex";
-              lastGood = { voice, codexBin };
+              let agent: OperatorAgentSettings | undefined;
+              let agentValid = true;
+              if (o.agent !== undefined) {
+                const agentObj = jsonRecord(o.agent);
+                if (agentObj === null) {
+                  opts.warn(`${path}: agent must be an object`);
+                  agentValid = false;
+                } else {
+                  const kind = jsonStringField(agentObj.kind)?.trim();
+                  const bin = jsonStringField(agentObj.bin)?.trim();
+                  const modelRaw = jsonStringField(agentObj.model)?.trim();
+                  const model = modelRaw || DEFAULT_OPERATOR_MODEL;
+                  if (kind !== "ompx") {
+                    opts.warn(`${path}: unknown agent kind "${String(kind)}" (expected "ompx")`);
+                    agentValid = false;
+                  } else if (!bin) {
+                    opts.warn(`${path}: agent bin must be non-empty`);
+                    agentValid = false;
+                  } else {
+                    agent = { kind: "ompx", bin, model };
+                  }
+                }
+              }
+              if (!agentValid) {
+                lastGood = null;
+              } else {
+                const settings: LiveSettings = { voice, codexBin };
+                if (agent !== undefined) {
+                  settings.agent = agent;
+                }
+                lastGood = settings;
+              }
             }
           }
         } catch (err) {

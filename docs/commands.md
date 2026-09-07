@@ -26,7 +26,7 @@ If the host runs multiple instances, prepend `COLLIE_INSTANCE=<name>` to every v
 | **Link** | `collie link` · `collie unlink` | Put `collie` on your PATH ([below](#put-collie-on-your-path)) |
 | **Logs** | `collie logs` | Tail the journal / log file |
 | **Voice** | `collie stt setup` · `stt test` · `stt status` · `stt off` | Configure / check / disable [voice input](voice-and-push.md#voice-input-optional) |
-| **Live call** | `collie live on` · `live status` · `live off` | Enable / check / disable realtime [live calls](voice-and-push.md#live-call-optional) |
+| **Live call** | `collie live on [--agent ompx] [--model <id>]` · `live status` · `live off` | Enable / check / disable realtime [live calls](voice-and-push.md#live-call-optional) |
 | **Push keys** | `collie push-keys` | Generate the VAPID keypair into your `.env` |
 | **Push test** | `collie push-test` | Send one notification to prove it works |
 

@@ -557,6 +557,15 @@ const currentVersion = (
 // or a machine with an unbuilt bundle would read as skewed against every peer including itself.
 const packVersion = collieVersionBare(rootDir);
 
+const collieBinary = join(rootDir, "bin", "collie");
+const canRunUpdate = existsSync(collieBinary);
+const liveOperator = canRunUpdate
+  ? {
+      pumpCommand: [collieBinary, "live-mcp"],
+      stateDir: cfg.stateDir,
+    }
+  : undefined;
+
 // Realtime live voice calls (bridge/live/). Re-reads `<stateDir>/live.json` per request behind
 // an mtime check. An absent file is the feature being off.
 const live = createLiveService({
@@ -566,6 +575,7 @@ const live = createLiveService({
   }),
   broker: (codexBin) => createCodexAuthBroker({ codexBin, clientVersion: packVersion }),
   resolvePane: async () => ({ code: "live.no_pane" }),
+  operator: liveOperator,
 });
 
 const updateStore = new UpdateStateStore(cfg);
@@ -638,8 +648,7 @@ const updateMonitor = new UpdateMonitor({
 // fallback matters for the source-mode bridge (`bun bridge/index.ts`), where `execPath` is Bun
 // itself: there, with no compiled binary present, there is nothing honest to spawn, and the route
 // answers 503 rather than shelling out to something that is not Collie.
-const collieBinary = join(rootDir, "bin", "collie");
-const canRunUpdate = existsSync(collieBinary);
+
 // How long `collie update --check --json` may take before the bridge stops waiting. It asks git for
 // the remote's tags over the network, so it is not instant; past this, "no report" is the answer,
 // which REFUSES an update rather than allowing one.
