@@ -3,6 +3,7 @@ import { useRevalidator } from "react-router";
 
 import { refreshNow } from "@/lib/api";
 import { isLongUpload } from "@/lib/connection-health";
+import { useDesignPrefs, type DisplayMode } from "@/lib/design";
 import { beginCatchUp, endCatchUp, isLocked, useLocked } from "@/lib/idle";
 import {
   burstAppliesTo,
@@ -122,6 +123,29 @@ export function intervalFor(
   return IDLE_MS;
 }
 
+/** The floor an e-ink panel puts under every gap, and under a burst. */
+export const EINK_MIN_MS = 5000;
+export const EINK_BURST_MS = 2000;
+
+/**
+ * Slow the cadence down to what a reflective panel can actually redraw.
+ *
+ * E-INK REPAINTS ARE NOT FREE THE WAY A BACKLIT ONE'S ARE. Every poll that changes a pixel costs a
+ * partial refresh, which ghosts, and a run of them costs a full-panel flash to clear the ghosting.
+ * At the screen cadence — 300ms during a burst — the panel spends its whole time flashing and the
+ * text under it is never legible for a full second. So the whole ladder is floored, and the burst is
+ * floored SEPARATELY and lower: a send still has to read as landing, and 2s is the fastest an e-ink
+ * reader can perceive as a response rather than as a strobe.
+ *
+ * Pure, and takes the mode rather than reading the store, so the cadence stays unit-testable
+ * end-to-end the way `intervalFor` is.
+ */
+export function floorForDisplay(ms: number, display: DisplayMode): number {
+  if (display !== "eink") return ms;
+  if (ms <= BURST_MS) return Math.max(BURST_MS, EINK_BURST_MS);
+  return Math.max(ms, EINK_MIN_MS);
+}
+
 /** Whether any agent anywhere in the herd is working or blocked. */
 function herdBusy(data: HomeData | undefined): boolean {
   return data?.agents.some((a) => a.status === "working" || a.status === "blocked") ?? false;
@@ -197,14 +221,20 @@ export function usePolling(
   const changed = useLastPollChanged();
   const sendKick = useSendCount();
   const topoBursting = useTopologyBursting();
-  const ms = intervalFor(data, paneId, {
-    bursting: burstAppliesTo(burstPane, paneId),
-    // The caller may own the flag directly (the tests do); otherwise the pane view's own follow
-    // intent, published to lib/poll-intent, answers — and it is true whenever no pane is open.
-    following: following ?? storeFollowing,
-    changed,
-    topologyBursting: topoBursting,
-  });
+  const { display } = useDesignPrefs();
+  const ms = floorForDisplay(
+    intervalFor(data, paneId, {
+      bursting: burstAppliesTo(burstPane, paneId),
+      // The caller may own the flag directly (the tests do); otherwise the pane view's own follow
+      // intent, published to lib/poll-intent, answers — and it is true whenever no pane is open.
+      following: following ?? storeFollowing,
+      changed,
+      topologyBursting: topoBursting,
+    }),
+    // The panel, not a preference: a reflective display cannot repaint at the screen cadence
+    // without ghosting, so the resolved gap gets a floor rather than a different set of rules.
+    display,
+  );
 
   // Resuming from the idle lock must refetch AT ONCE. The route tree stays mounted through a pause
   // (see App), so unlocking re-runs no loaders by itself — without this the first thing you'd see on

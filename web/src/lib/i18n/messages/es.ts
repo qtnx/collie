@@ -17,6 +17,12 @@ export const es: Dictionary = {
   "settings.theme.option.light": "Claro",
   "settings.theme.option.dark": "Oscuro",
 
+  // --- settings.display ---
+  "settings.display.title": "Pantalla",
+  "settings.display.description": "Pantalla normal o panel de tinta electrónica.",
+  "settings.display.option.screen": "Pantalla",
+  "settings.display.option.eink": "Tinta electrónica",
+
   // --- settings.haptics ---
   "settings.haptics.title": "Respuesta háptica",
   "settings.haptics.description": "Vibración breve al presionar teclas o respuestas rápidas.",

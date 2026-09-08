@@ -66,6 +66,9 @@ export function AgentIcon({
       className={cn("shrink-0", className)}
       role="img"
       aria-label={`${agent} logo`}
+      // The one attribute the e-ink block keys on: brand colour is gone there and the mark is
+      // drawn as ink on paper (index.css `:root.eink [data-brand-mark]`).
+      data-brand-mark=""
     >
       {grad && (
         <defs>

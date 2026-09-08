@@ -17,6 +17,12 @@ export const ja: Dictionary = {
   "settings.theme.option.light": "ライト",
   "settings.theme.option.dark": "ダーク",
 
+  // --- settings.display ---
+  "settings.display.title": "ディスプレイ",
+  "settings.display.description": "通常の画面か、電子ペーパーか。",
+  "settings.display.option.screen": "画面",
+  "settings.display.option.eink": "電子ペーパー",
+
   // --- settings.haptics ---
   "settings.haptics.title": "ハプティクス",
   "settings.haptics.description": "キー入力やクイック返信時に触覚フィードバックを返します。",

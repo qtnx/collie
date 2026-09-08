@@ -2,9 +2,12 @@ import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
+  DEFAULT_DISPLAY,
   DEFAULT_FONT,
   DESIGN_STORAGE_KEY,
+  DISPLAY_MODES,
   SHIPPED_FONTS,
+  displayClass,
   fontClass,
   parseDesignPrefs,
 } from "@/lib/design";
@@ -282,6 +285,25 @@ describe("theme-init.js and lib/design.ts agree", () => {
   it("declares every class it can produce", () => {
     for (const font of [...SHIPPED_FONTS, "op:a.woff2"]) {
       const cls = fontClass(font);
+      if (cls !== "") expect(css).toContain(`:root.${cls}`);
+    }
+  });
+
+  // The SECOND thing the key carries (the panel), held to the same contract as the face: one closed
+  // list, one class name, spelled on both sides. A drift here is silent in the same way — an e-ink
+  // reader would simply watch the app paint in colour and then flip, which costs a full-panel
+  // refresh and is exactly what the pre-paint path exists to prevent.
+  it("agrees on the display modes and the class name", () => {
+    expect(displayClass("eink")).toBe("eink");
+    expect(init).toContain('d.display === "eink"');
+    expect(init).toContain('root.classList.add("eink")');
+    // The default wears no class on either side, so a device that never opened the setting still
+    // runs no JavaScript before its first paint.
+    expect(displayClass(DEFAULT_DISPLAY)).toBe("");
+    expect(init).not.toContain(`"${DEFAULT_DISPLAY}"`);
+    // Every class either side can produce has to exist in the stylesheet.
+    for (const mode of DISPLAY_MODES) {
+      const cls = displayClass(mode);
       if (cls !== "") expect(css).toContain(`:root.${cls}`);
     }
   });

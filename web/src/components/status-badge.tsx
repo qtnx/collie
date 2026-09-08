@@ -98,6 +98,11 @@ export function StatusDot({
           to push in, and nothing outside it moves, so the ring/fill swap is paint only. Left as is
           on purpose — this is not a no-shift case. */}
       <span
+        // The state as an ATTRIBUTE as well as a class, for the one renderer that cannot read the
+        // colour: index.css's `:root.eink` block, where every status token collapses to black and
+        // the three states have to be told apart by shape instead (solid / hollow / ringed). No
+        // behaviour and no styling of its own on a normal screen.
+        data-status={status}
         className={cn(
           "relative inline-flex size-full rounded-full",
           breathing && "status-breathe",

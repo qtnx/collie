@@ -324,6 +324,167 @@
   color-scheme: dark;
 }
 
+/* ── E-ink ──────────────────────────────────────────────────────────────────────────────────────
+   `:root.eink`, set by lib/design.ts and by public/theme-init.js before first paint. NOT a third
+   theme: it sits BELOW the Light/Dark pins in this file so it wins the `color-scheme` cascade
+   outright (same 0-2-0 specificity, later in source), because on a reflective panel the choice is
+   not a preference — a dark palette on e-ink is a black page the panel cannot actually make black.
+
+   THE PALETTE COLLAPSES TO TWO VALUES, pure white and pure black, and that is the point. Every
+   token in the block above is tuned for a backlit display where a 1.34:1 hairline is a crisp cut;
+   on a 16-level greyscale panel the same value dithers into a smear, and mid-greys of adjacent
+   tokens (--muted 0.94, --accent 0.92, --background 0.97) are indistinguishable. So the surfaces
+   all become paper and the ink all becomes ink. What the greys used to carry — hierarchy, state,
+   grouping — is carried by weight, border and glyph instead (WCAG 1.4.1 is satisfied everywhere in
+   this app already, which is what makes the collapse safe rather than lossy).
+
+   MOTION IS REMOVED, not reduced. A partial refresh on e-ink ghosts, and an animation is a stream
+   of them: a 2.4s breathing dot leaves a grey smudge that outlives the pane. Shadows and blurs go
+   for the same reason — a panel with no backlight renders both as dither noise. */
+:root.eink {
+  /* Pins the light half of every `light-dark()` this block does not override, and gets the browser
+     to paint its own chrome (scrollbars, caret, form controls) in the same space. */
+  color-scheme: light;
+
+  /* Paper. One value for every surface — there is no raised card on a sheet of e-paper. */
+  --background: #fff;
+  --card: #fff;
+  --popover: #fff;
+  --chrome: #fff;
+  --secondary: #fff;
+  --muted: #fff;
+  --accent: #fff;
+
+  /* Ink. Includes --border, --rule and --ring: a line either exists at full strength or it is
+     noise, and --muted-foreground stops being a quieter grey because there is no grey to be. */
+  --foreground: #000;
+  --card-foreground: #000;
+  --popover-foreground: #000;
+  --primary: #000;
+  --secondary-foreground: #000;
+  --muted-foreground: #000;
+  --accent-foreground: #000;
+  /* An EDGE, not a fill, despite the name: every use in src/ is `border-input` on a transparent
+     field. White here would delete the input's own outline. */
+  --input: #000;
+  --border: #000;
+  --rule: #000;
+  --ring: #000;
+
+  /* Ink on paper, inverted — a filled control (the selected radio, a primary button). */
+  --primary-foreground: #fff;
+  --destructive-foreground: #fff;
+
+  /* The "control is ON" tint has no tint left, so the state is carried by the ring the block
+     below thickens plus the label's own weight. */
+  --control-on: #fff;
+  --control-on-foreground: #000;
+
+  /* Every semantic hue collapses to ink. Status is carried by the glyph, the word beside it and the
+     dot's fill/ring shape (see the `[data-status]` rules below) — never by hue, which this panel
+     cannot render. The host identity tints go the same way: the machine's NAME is always drawn
+     beside the mark, so the tint was the second encoding and never the only one. */
+  --destructive: #000;
+  --status-blocked: #000;
+  --status-working: #000;
+  --status-done: #000;
+  --status-idle: #000;
+  --status-unknown: #000;
+  --status-info: #000;
+  --host-0: #000;
+  --host-1: #000;
+  --host-2: #000;
+  --host-3: #000;
+  --host-4: #000;
+  --host-5: #000;
+  --host-6: #000;
+  --host-7: #000;
+  --host-8: #000;
+  --host-9: #000;
+
+  /* TWO GROUPS ARE DELIBERATELY UNTOUCHED, and both are load-bearing omissions rather than gaps.
+     --radius is 2px already, which is as close to a printed edge as this app gets. And --ansi-* is
+     the terminal's own palette: what an agent writes into its own output is the agent's, not the
+     app's, and flattening it to black would erase a diff's added-vs-removed lines — the one place
+     in this app where colour is genuinely the only encoding, and the one thing an operator opens a
+     pane to read. The mirror keeps its 16 slots on e-ink too. */
+}
+
+/* No motion, no depth. `!important` because these fight utility classes and inline transition
+   declarations spread across every component, and a panel that ghosts is not a place for a
+   specificity argument. This also neutralises every `animate-spin` in the app at once — there are
+   69 of them and none needs to be found. */
+:root.eink *,
+:root.eink *::before,
+:root.eink *::after {
+  transition: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+
+/* A 1px rule at full black is still a rumour on a panel that dithers its edges. 2px is the
+   thinnest line that comes back as one solid row of pixels. */
+:root.eink .border,
+:root.eink .border-t,
+:root.eink .border-b,
+:root.eink .border-l,
+:root.eink .border-r,
+:root.eink .border-x,
+:root.eink .border-y {
+  border-width: 2px;
+}
+
+/* Named explicitly as well as covered by the blanket rule above, so deleting one does not silently
+   restore the other. The busy bar additionally has to fill its track: its 40% width only makes
+   sense while it is travelling, and with the travel gone a stub would read as a stalled bar. */
+:root.eink .status-breathe,
+:root.eink .busy-bar__indicator,
+:root.eink .dog-gallop--running {
+  animation: none;
+}
+:root.eink .busy-bar__indicator {
+  width: 100%;
+}
+
+/* THE STATUS DOT, which was the one place colour was doing the work alone (components/agent-card.tsx
+   draws it with only an `sr-only` word beside it). With every hue now black, the three states are
+   told apart by SHAPE: working is a solid disc, resting is a hollow ring, and blocked is a ring
+   with a dot in it — the densest mark, for the one state that wants you. */
+:root.eink [data-status] {
+  border: 2px solid #000 !important;
+}
+:root.eink [data-status="idle"],
+:root.eink [data-status="unknown"],
+:root.eink [data-status="done"],
+:root.eink [data-status="blocked"] {
+  background: #fff !important;
+}
+:root.eink [data-status="blocked"]::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 9999px;
+  background: #000;
+}
+
+/* THE HARNESS MARK (components/agent-icon.tsx): a brand-coloured tile on a screen, ink on paper
+   here. The tile becomes a 2px frame and the glyph inside it is drawn black, gradient or not —
+   `fill`/`stroke` are overridden on the group, which is where the paint is applied. */
+:root.eink [data-brand-mark] > rect {
+  fill: #fff;
+  stroke: #000;
+  stroke-width: 2;
+}
+:root.eink [data-brand-mark] > g {
+  fill: #000;
+}
+:root.eink [data-brand-mark] > g[stroke] {
+  fill: none;
+  stroke: #000;
+}
+
 @theme inline {
   /* One radius, four names. There is no ramp to walk: sm/md/lg/xl all resolve to the same 2px, so
      `rounded-md` and `rounded-xl` are the same corner and no component can drift rounder than its

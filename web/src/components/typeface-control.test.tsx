@@ -58,7 +58,12 @@ describe("TypefaceControl", () => {
     await user.selectOptions(await screen.findByLabelText("Family"), "grotesk");
 
     expect(document.documentElement).toHaveClass("font-grotesk");
-    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}")).toEqual({ font: "grotesk" });
+    // The blob is the WHOLE key, not just the face: `collie:design:v1` carries every design pref
+    // (ADR 0033's "seed of theming"), and `display` is the sibling that arrived first.
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}")).toEqual({
+      font: "grotesk",
+      display: "screen",
+    });
   });
 
   it("swapping back to the default takes the class off again", async () => {
@@ -93,6 +98,7 @@ describe("TypefaceControl", () => {
     // voice once /api/config landed.
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}")).toEqual({
       font: "op:departure.woff2",
+      display: "screen",
       operatorFont: { family: "Departure Mono", basename: "departure.woff2", weight: "400 700" },
     });
   });

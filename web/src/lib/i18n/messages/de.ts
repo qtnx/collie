@@ -18,6 +18,12 @@ export const de: Dictionary = {
   "settings.theme.option.light": "Hell",
   "settings.theme.option.dark": "Dunkel",
 
+  // --- settings.display ---
+  "settings.display.title": "Anzeige",
+  "settings.display.description": "Bildschirm oder E-Ink-Display.",
+  "settings.display.option.screen": "Bildschirm",
+  "settings.display.option.eink": "E-Ink",
+
   // --- settings.haptics ---
   "settings.haptics.title": "Haptik",
   "settings.haptics.description": "Kurze Vibration bei Tastendruck und Schnellantworten.",

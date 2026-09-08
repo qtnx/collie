@@ -12,6 +12,7 @@ import { PairedDevices } from "@/components/paired-devices";
 import { PackSettingsCard } from "@/components/pack-settings-card";
 import { SnoozeControl } from "@/components/snooze-control";
 import { ThemeControl } from "@/components/theme-control";
+import { DisplayControl } from "@/components/display-control";
 import { HapticsControl } from "@/components/haptics-control";
 import { HandsFreeControl } from "@/components/hands-free-control";
 import { ZenControl } from "@/components/zen-control";
@@ -121,6 +122,11 @@ export function SettingsRoute() {
         {/* First of the SETTINGS: it's the one people come here to change, and below the
             notification stack it sat off-screen on a phone, a scroll into a 1240px page. */}
         <ThemeControl />
+
+        {/* Directly under Appearance, because it is the question Appearance cannot answer: not which
+            palette you prefer but what kind of panel you are holding. E-ink overrides the theme
+            outright (index.css `:root.eink`), so it has to be read straight after it. */}
+        <DisplayControl />
 
         {/* Language sits right beside appearance — both are "how this phone presents itself" — and
             ahead of device behaviour, which is more of a per-device tweak than a standing choice. */}

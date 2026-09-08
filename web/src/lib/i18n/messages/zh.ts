@@ -18,6 +18,12 @@ export const zh: Dictionary = {
   "settings.theme.option.light": "浅色",
   "settings.theme.option.dark": "深色",
 
+  // --- settings.display ---
+  "settings.display.title": "显示屏",
+  "settings.display.description": "普通屏幕，或电子墨水屏。",
+  "settings.display.option.screen": "普通屏幕",
+  "settings.display.option.eink": "电子墨水屏",
+
   // --- settings.haptics ---
   "settings.haptics.title": "触觉反馈",
   "settings.haptics.description": "按键或快速回复时触发轻微震动。",

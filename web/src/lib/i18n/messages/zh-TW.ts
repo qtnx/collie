@@ -18,6 +18,12 @@ export const zhTW: Dictionary = {
   "settings.theme.option.light": "淺色",
   "settings.theme.option.dark": "深色",
 
+  // --- settings.display ---
+  "settings.display.title": "顯示器",
+  "settings.display.description": "一般螢幕，或電子紙面板。",
+  "settings.display.option.screen": "一般螢幕",
+  "settings.display.option.eink": "電子紙",
+
   // --- settings.haptics ---
   "settings.haptics.title": "觸覺回饋",
   "settings.haptics.description": "按鍵或快速回覆時觸發輕微震動。",

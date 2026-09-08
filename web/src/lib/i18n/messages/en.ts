@@ -27,6 +27,12 @@ export const en = {
   "settings.theme.option.light": "Light",
   "settings.theme.option.dark": "Dark",
 
+  // --- settings.display ---
+  "settings.display.title": "Display",
+  "settings.display.description": "Screen, or an e-ink panel.",
+  "settings.display.option.screen": "Screen",
+  "settings.display.option.eink": "E-ink",
+
   // --- settings.haptics ---
   "settings.haptics.title": "Haptics",
   "settings.haptics.description": "A short buzz when you press a key or a quick reply.",

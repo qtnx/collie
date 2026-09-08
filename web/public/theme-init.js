@@ -52,6 +52,10 @@
     // else, including an `op:` value, falls through and leaves the element bare.
     if (d.font === "system") root.classList.add("font-system");
     else if (d.font === "grotesk") root.classList.add("font-grotesk");
+    // The panel, same shape and the same closed list. An e-ink reader must not watch the app paint
+    // in colour and then go monochrome — the flash costs a full-panel refresh, which is the one
+    // thing this mode exists to avoid. `screen` is the default and wears NO class.
+    if (d.display === "eink") root.classList.add("eink");
   } catch {
     // A truncated write, a hand-edited blob, or private mode. The default face is the right answer
     // to all three, and it is the one already in the stylesheet.

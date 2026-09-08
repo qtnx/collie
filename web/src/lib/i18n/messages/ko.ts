@@ -18,6 +18,12 @@ export const ko: Dictionary = {
   "settings.theme.option.light": "라이트",
   "settings.theme.option.dark": "다크",
 
+  // --- settings.display ---
+  "settings.display.title": "디스플레이",
+  "settings.display.description": "일반 화면 또는 전자잉크 패널.",
+  "settings.display.option.screen": "화면",
+  "settings.display.option.eink": "전자잉크",
+
   // --- settings.haptics ---
   "settings.haptics.title": "햅틱 피드백",
   "settings.haptics.description": "키 입력 또는 빠른 응답 선택 시 진동으로 알립니다.",

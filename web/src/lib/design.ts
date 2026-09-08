@@ -42,6 +42,22 @@ export type ShippedFont = (typeof SHIPPED_FONTS)[number];
 /** The face a device gets before it says otherwise. */
 export const DEFAULT_FONT: ShippedFont = "aldrich";
 
+/**
+ * What kind of panel this device is, which is a different question from which theme it wants.
+ *
+ * `screen` is every backlit display and the default. `eink` is a reflective monochrome panel — a
+ * Boox, a reMarkable, a Kindle browser — where the constraints are not aesthetic: partial refreshes
+ * ghost, greys dither into mush, and an animation is a stream of full-panel flashes. The mode is
+ * therefore not a "theme" and does not belong beside Light/Dark. It answers to the HARDWARE, and it
+ * overrides the theme rather than joining it (index.css `:root.eink` pins `color-scheme: light`).
+ */
+export const DISPLAY_MODES = ["screen", "eink"] as const;
+
+export type DisplayMode = (typeof DISPLAY_MODES)[number];
+
+/** The panel a device is assumed to be until it says otherwise. */
+export const DEFAULT_DISPLAY: DisplayMode = "screen";
+
 export interface DesignPrefs {
   /** A {@link ShippedFont}, or `op:<basename>`. Never validated by its type — always by a predicate. */
   font: string;
@@ -58,9 +74,14 @@ export interface DesignPrefs {
    * wholesale, including by removing a face the operator has deleted.
    */
   operatorFont?: OperatorFontFace;
+  /**
+   * The panel this device is. `screen` (the default) wears NO class, for the same reason the
+   * default face does: a device that never opened the setting runs no JavaScript before first paint.
+   */
+  display: DisplayMode;
 }
 
-const DEFAULT_PREFS: DesignPrefs = { font: DEFAULT_FONT };
+const DEFAULT_PREFS: DesignPrefs = { font: DEFAULT_FONT, display: DEFAULT_DISPLAY };
 
 let prefs: DesignPrefs = load();
 const listeners = new Set<() => void>();
@@ -73,6 +94,11 @@ export function isShippedFont(value: string): value is ShippedFont {
 /** True for a value the select may hold: a shipped key, or a namespaced operator basename. */
 export function isDesignFont(value: string): boolean {
   return isShippedFont(value) || value.startsWith(OPERATOR_FONT_PREFIX);
+}
+
+/** True for a shipped panel mode. Total over any string — same closed-list discipline as the faces. */
+export function isDisplayMode(value: string): value is DisplayMode {
+  return DISPLAY_MODES.some((mode) => mode === value);
 }
 
 /**
@@ -90,6 +116,19 @@ export function fontClass(font: string): string {
 }
 
 const FONT_CLASSES = ["font-system", "font-grotesk", "font-operator"] as const;
+
+/**
+ * The class `<html>` should carry for `display`, or `""` for `screen` (which wears none).
+ *
+ * Same shape as {@link fontClass} and for the same reason: one place where a stored string becomes
+ * a class name, and it can only ever return a literal spelled right here. public/theme-init.js
+ * holds the pre-paint twin, and `fonts.test.ts` reads both files so neither can drift.
+ */
+export function displayClass(display: string): string {
+  return display === "eink" ? "eink" : "";
+}
+
+const DISPLAY_CLASSES = ["eink"] as const;
 
 function load(): DesignPrefs {
   try {
@@ -120,7 +159,11 @@ export function parseDesignPrefs(raw: string): DesignPrefs {
   if (doc === undefined) return DEFAULT_PREFS;
   const stored = asJsonString(doc.font);
   const font = stored !== undefined && isDesignFont(stored) ? stored : DEFAULT_FONT;
-  const next: DesignPrefs = { font };
+  const storedDisplay = asJsonString(doc.display);
+  // Total by construction: an unknown value, a number, a missing key and a hand-edited blob all
+  // land on `screen`, which is the mode that changes nothing.
+  const display = storedDisplay !== undefined && isDisplayMode(storedDisplay) ? storedDisplay : DEFAULT_DISPLAY;
+  const next: DesignPrefs = { font, display };
   const face = readOperatorFace(doc.operatorFont);
   if (face !== undefined) next.operatorFont = face;
   return next;
@@ -165,6 +208,23 @@ export function applyFontClass(font: string): void {
   if (wanted !== "") root.classList.add(wanted);
 }
 
+/**
+ * The panel half of the same job: put `eink` on `<html>` for an e-ink device, take it off otherwise.
+ *
+ * Separate from {@link applyFontClass} rather than one `applyDesign`, because they are reconciled at
+ * different moments — the face changes when /api/config lands an operator row, the panel never does
+ * after init — and a single function would have to re-stamp both to change either.
+ */
+export function applyDisplayClass(display: string): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  const wanted = displayClass(display);
+  for (const name of DISPLAY_CLASSES) {
+    if (name !== wanted) root.classList.remove(name);
+  }
+  if (wanted !== "") root.classList.add(wanted);
+}
+
 export function designPrefs(): DesignPrefs {
   return prefs;
 }
@@ -175,13 +235,26 @@ export function designPrefs(): DesignPrefs {
  */
 export function setDesignFont(font: string, face?: OperatorFontFace): void {
   if (!isDesignFont(font)) return;
-  const next: DesignPrefs = { font };
+  // `display` is carried over, never defaulted: a face change must not quietly put an e-ink reader
+  // back on the backlit palette.
+  const next: DesignPrefs = { font, display: prefs.display };
   if (face !== undefined) next.operatorFont = face;
   // A shipped choice drops the mirror: keeping a face nobody is using would leave the next cold load
   // injecting an `@font-face` for a font it does not render.
   prefs = next;
   persist();
   applyFontClass(prefs.font);
+  for (const fn of listeners) fn();
+}
+
+/** Choose a panel. Same store contract as {@link setDesignFont}: persist, stamp the class, notify. */
+export function setDesignDisplay(display: string): void {
+  if (!isDisplayMode(display)) return;
+  const next: DesignPrefs = { font: prefs.font, display };
+  if (prefs.operatorFont !== undefined) next.operatorFont = prefs.operatorFont;
+  prefs = next;
+  persist();
+  applyDisplayClass(prefs.display);
   for (const fn of listeners) fn();
 }
 
@@ -212,6 +285,7 @@ export function useDesignPrefs(): DesignPrefs {
  */
 export function initDesign(): void {
   applyFontClass(prefs.font);
+  applyDisplayClass(prefs.display);
 }
 
 /**
@@ -225,6 +299,7 @@ export function initDesign(): void {
 export function __resetDesign(): void {
   prefs = load();
   applyFontClass(prefs.font);
+  applyDisplayClass(prefs.display);
   for (const fn of listeners) fn();
 }
 

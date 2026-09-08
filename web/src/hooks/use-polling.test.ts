@@ -2,10 +2,13 @@ import { act, renderHook } from "@testing-library/react";
 
 import {
   BURST_MS,
+  EINK_BURST_MS,
+  EINK_MIN_MS,
   HOME_BUSY_MS,
   HOT_MS,
   IDLE_MS,
   SUPERSEDE_MS,
+  floorForDisplay,
   intervalFor,
   type PollIntent,
   usePolling,
@@ -162,6 +165,34 @@ describe("intervalFor", () => {
 
   it("a pane the snapshot no longer knows about is not 'open'", () => {
     expect(intervalFor(idlePane, "w99:phantom", on({ changed: true }))).toBe(IDLE_MS);
+  });
+});
+
+// A reflective panel ghosts on every partial refresh, so the resolved gap gets a FLOOR rather than
+// a second set of rules — the cadence still says what the operator is watching, it just cannot say
+// it faster than the hardware can redraw.
+describe("floorForDisplay", () => {
+  it("changes nothing on a screen", () => {
+    for (const ms of [BURST_MS, HOT_MS, HOME_BUSY_MS, IDLE_MS]) {
+      expect(floorForDisplay(ms, "screen")).toBe(ms);
+    }
+  });
+
+  it("floors every non-burst gap on e-ink", () => {
+    expect(floorForDisplay(HOT_MS, "eink")).toBe(EINK_MIN_MS);
+    expect(floorForDisplay(HOME_BUSY_MS, "eink")).toBe(EINK_MIN_MS);
+    // IDLE_MS is already slower than the floor, so it survives untouched — the floor is a minimum,
+    // never a replacement cadence.
+    expect(floorForDisplay(IDLE_MS, "eink")).toBe(IDLE_MS);
+    expect(IDLE_MS).toBeGreaterThan(EINK_MIN_MS);
+  });
+
+  // The burst gets its own, LOWER floor: a send still has to read as landing, and holding it at the
+  // full 5s would make every keystroke feel dropped.
+  it("keeps a burst faster than the resting floor", () => {
+    expect(floorForDisplay(BURST_MS, "eink")).toBe(EINK_BURST_MS);
+    expect(EINK_BURST_MS).toBeLessThan(EINK_MIN_MS);
+    expect(EINK_BURST_MS).toBeGreaterThan(BURST_MS);
   });
 });
 
